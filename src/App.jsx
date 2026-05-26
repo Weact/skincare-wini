@@ -21,7 +21,7 @@ import { useAuth } from './hooks/useAuth'
 import { useProducts } from './hooks/useProducts'
 import { useCategories } from './hooks/useCategories'
 import { resizeImage } from './utils/imageUtils'
-import { CATEGORY_EMOJIS } from './constants'
+import { CATEGORY_EMOJIS, PRESET_CATEGORIES } from './constants'
 import './App.css'
 
 function generateId() {
@@ -179,6 +179,9 @@ export default function App() {
   const grouped = groupProducts(products, categories)
   const categoryIds = categories.map(c => `cat-${c.id}`)
   const uncategorized = grouped.__none || []
+  const unusedPresets = PRESET_CATEGORIES.filter(
+    p => !categories.some(c => c.name.toLowerCase() === p.name.toLowerCase())
+  )
 
   return (
     <div className="app">
@@ -254,6 +257,24 @@ export default function App() {
                 </svg>
                 New category
               </button>
+            )}
+
+            {/* ── Preset category chips ── */}
+            {unusedPresets.length > 0 && (
+              <div className="preset-chips">
+                <span className="preset-chips-label">Suggested</span>
+                <div className="preset-chips-scroll">
+                  {unusedPresets.map(p => (
+                    <button
+                      key={p.name}
+                      className="preset-chip"
+                      onClick={() => addCategory(p.name, p.emoji)}
+                    >
+                      {p.emoji} {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* ── Product list ── */}

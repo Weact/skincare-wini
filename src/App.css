@@ -944,6 +944,71 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   background: var(--bg);
 }
 
+/* ── Preset category chips ── */
+.preset-chips {
+  margin-bottom: 16px;
+}
+
+.preset-chips-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+}
+
+.preset-chips-scroll {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 639px) {
+  .preset-chips-scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .preset-chips-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.preset-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  min-height: 34px;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.preset-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.preset-chip:active {
+  opacity: 0.7;
+}
+
 /* ── Category section ── */
 .cat-section {
   margin-bottom: 20px;
