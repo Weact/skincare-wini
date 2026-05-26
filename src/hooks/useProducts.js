@@ -54,5 +54,13 @@ export function useProducts(userId) {
     await deleteDoc(doc(db, 'users', userId, 'products', id))
   }
 
-  return { products, addProduct, updateProduct, deleteProduct }
+  async function reorderProductsInCategory(orderedProducts) {
+    const batch = writeBatch(db)
+    orderedProducts.forEach((product, index) => {
+      batch.set(doc(db, 'users', userId, 'products', product.id), { order: index }, { merge: true })
+    })
+    await batch.commit()
+  }
+
+  return { products, addProduct, updateProduct, deleteProduct, reorderProductsInCategory }
 }

@@ -10,7 +10,7 @@ const USAGE_OPTIONS = [
   { value: 24, label: '24 months' },
 ]
 
-export default function ProductCard({ product, onUpdate, onDelete, startExpanded }) {
+export default function ProductCard({ product, onUpdate, onDelete, startExpanded, categories = [], dragHandleProps }) {
   const [expanded, setExpanded] = useState(startExpanded)
   const [name, setName] = useState(product.name || '')
   const [suggestion, setSuggestion] = useState(null)
@@ -104,6 +104,18 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   return (
     <div className={`card card--${status.type}`}>
       <div className="card-header" onClick={() => setExpanded(e => !e)}>
+        {dragHandleProps && (
+          <span className="product-drag-handle" {...dragHandleProps} onClick={e => e.stopPropagation()}>
+            <svg width="12" height="16" viewBox="0 0 12 16" fill="none">
+              <circle cx="3.5" cy="3" r="1.5" fill="currentColor"/>
+              <circle cx="8.5" cy="3" r="1.5" fill="currentColor"/>
+              <circle cx="3.5" cy="8" r="1.5" fill="currentColor"/>
+              <circle cx="8.5" cy="8" r="1.5" fill="currentColor"/>
+              <circle cx="3.5" cy="13" r="1.5" fill="currentColor"/>
+              <circle cx="8.5" cy="13" r="1.5" fill="currentColor"/>
+            </svg>
+          </span>
+        )}
         {product.photo && (
           <img src={product.photo} className="card-thumb" alt="" />
         )}
@@ -168,6 +180,24 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
               onChange={handlePhotoChange}
             />
           </div>
+
+          {categories.length > 0 && (
+            <div className="field">
+              <label className="field-label">Category</label>
+              <select
+                className="field-input field-select"
+                value={product.categoryId || ''}
+                onChange={e => onUpdate({ categoryId: e.target.value || null })}
+              >
+                <option value="">Uncategorized</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.emoji ? `${cat.emoji} ` : ''}{cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="field">
             <label className="field-label">Product name</label>
