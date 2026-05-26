@@ -1,5 +1,12 @@
 export const CHANGELOG = [
   {
+    version: '1.6',
+    date: 'May 2026',
+    entries: [
+      'New settings panel to customize app appearance',
+    ],
+  },
+  {
     version: '1.5',
     date: 'May 2026',
     entries: [

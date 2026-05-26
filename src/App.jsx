@@ -19,6 +19,7 @@ import ProductCard from './components/ProductCard'
 import CategorySection from './components/CategorySection'
 import AuthButton from './components/AuthButton'
 import ChangelogModal from './components/ChangelogModal'
+import SettingsPanel from './components/SettingsPanel'
 import { useAuth } from './hooks/useAuth'
 import { useProducts } from './hooks/useProducts'
 import { useCategories } from './hooks/useCategories'
@@ -97,16 +98,31 @@ export default function App() {
     localStorage.setItem('lastSeenChangelog', LATEST_VERSION)
   }
 
-  const [theme, setTheme] = useState(
-    () => document.documentElement.getAttribute('data-theme') || 'light'
-  )
+  const [showSettings, setShowSettings] = useState(false)
+  const [settings, setSettings] = useState(() => ({
+    theme:    localStorage.getItem('theme')    || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+    accent:   localStorage.getItem('accent')   || 'rose',
+    font:     localStorage.getItem('font')     || 'system',
+    fontSize: localStorage.getItem('fontSize') || 'md',
+  }))
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
+    const html = document.documentElement
+    html.setAttribute('data-theme',     settings.theme)
+    html.setAttribute('data-accent',    settings.accent)
+    html.setAttribute('data-font',      settings.font)
+    html.setAttribute('data-font-size', settings.fontSize)
     document.getElementById('theme-color-meta').content =
-      theme === 'dark' ? '#100e1a' : '#faf7f5'
-  }, [theme])
+      settings.theme === 'dark' ? '#100e1a' : '#faf7f5'
+    localStorage.setItem('theme',    settings.theme)
+    localStorage.setItem('accent',   settings.accent)
+    localStorage.setItem('font',     settings.font)
+    localStorage.setItem('fontSize', settings.fontSize)
+  }, [settings])
+
+  function updateSetting(key, value) {
+    setSettings(s => ({ ...s, [key]: value }))
+  }
 
   // Close emoji picker on outside click
   useEffect(() => {
@@ -278,23 +294,13 @@ export default function App() {
             </svg>
             {changelogIsNew && <span className="changelog-dot" />}
           </button>
-          <AuthButton user={user} onLinkGoogle={linkWithGoogle} onSignOut={handleSignOut} />
-          <button
-            className="theme-toggle"
-            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-            aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-          >
-            {theme === 'light' ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/>
-                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            )}
+          <button className="settings-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+              <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
           </button>
+          <AuthButton user={user} onLinkGoogle={linkWithGoogle} onSignOut={handleSignOut} />
         </div>
       </header>
 
@@ -475,6 +481,9 @@ export default function App() {
 
       {showChangelog && (
         <ChangelogModal onClose={() => setShowChangelog(false)} />
+      )}
+      {showSettings && (
+        <SettingsPanel settings={settings} onUpdate={updateSetting} onClose={() => setShowSettings(false)} />
       )}
     </div>
   )
