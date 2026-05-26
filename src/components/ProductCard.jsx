@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { addMonths, formatDisplayDate, getProductStatus } from '../utils/dateUtils'
+import { resizeImage } from '../utils/imageUtils'
 import DateInput from './DateInput'
 
 const USAGE_OPTIONS = [
@@ -18,6 +19,15 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const nameRef = useRef(null)
   const debounceRef = useRef(null)
   const confirmTimerRef = useRef(null)
+  const photoInputRef = useRef(null)
+
+  async function handlePhotoChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    const photo = await resizeImage(file)
+    onUpdate({ photo })
+  }
 
   useEffect(() => {
     if (startExpanded && nameRef.current) {
@@ -94,6 +104,9 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   return (
     <div className={`card card--${status.type}`}>
       <div className="card-header" onClick={() => setExpanded(e => !e)}>
+        {product.photo && (
+          <img src={product.photo} className="card-thumb" alt="" />
+        )}
         <div className="card-header-left">
           <span className={`status-dot status-dot--${status.type}`} />
           <div className="card-name-block">
@@ -124,6 +137,38 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
 
       {expanded && (
         <div className="card-body">
+          <div className="field">
+            <label className="field-label">Photo</label>
+            {product.photo ? (
+              <div className="photo-preview">
+                <img src={product.photo} className="photo-img" alt="Product" />
+                <div className="photo-actions">
+                  <button className="photo-btn" onClick={() => photoInputRef.current.click()}>
+                    Change photo
+                  </button>
+                  <button className="photo-btn photo-btn--remove" onClick={() => onUpdate({ photo: null })}>
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="add-photo-btn" onClick={() => photoInputRef.current.click()}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="1.8"/>
+                </svg>
+                Add photo
+              </button>
+            )}
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handlePhotoChange}
+            />
+          </div>
+
           <div className="field">
             <label className="field-label">Product name</label>
             <input

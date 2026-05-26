@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import ProductCard from './components/ProductCard'
 import { loadProducts, saveProducts } from './utils/storage'
+import { resizeImage } from './utils/imageUtils'
 import './App.css'
 
 function generateId() {
@@ -32,7 +33,9 @@ export default function App() {
     saveProducts(products)
   }, [products])
 
-  function addProduct() {
+  const photoInputRef = useRef(null)
+
+  function addProduct(photo = null) {
     const id = generateId()
     const product = {
       id,
@@ -40,10 +43,19 @@ export default function App() {
       openingDate: null,
       expirationDate: null,
       usageMonths: null,
+      photo,
       createdAt: new Date().toISOString(),
     }
     setProducts(prev => [product, ...prev])
     setNewProductId(id)
+  }
+
+  async function handlePhotoFAB(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    const photo = await resizeImage(file)
+    addProduct(photo)
   }
 
   function updateProduct(id, updates) {
@@ -104,11 +116,31 @@ export default function App() {
         )}
       </main>
 
-      <button className="fab" onClick={addProduct} aria-label="Add product">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-        </svg>
-      </button>
+      <div className="fab-group">
+        <button
+          className="fab fab--secondary"
+          onClick={() => photoInputRef.current.click()}
+          aria-label="Add product with photo"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2"/>
+          </svg>
+        </button>
+        <button className="fab" onClick={() => addProduct()} aria-label="Add product">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handlePhotoFAB}
+      />
     </div>
   )
 }

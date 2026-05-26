@@ -544,11 +544,19 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   opacity: 0.7;
 }
 
-/* ── FAB ── */
-.fab {
+/* ── FAB group ── */
+.fab-group {
   position: fixed;
   bottom: calc(28px + env(safe-area-inset-bottom));
   right: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 50;
+}
+
+.fab {
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -559,14 +567,99 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   -webkit-tap-highlight-color: transparent;
+}
+
+.fab--secondary {
+  width: 50px;
+  height: 50px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: var(--primary);
 }
 
 .fab:active {
   transform: scale(0.9);
   box-shadow: 0 2px 8px var(--primary-shadow);
+}
+
+/* ── Card thumbnail ── */
+.card-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* ── Photo section in expanded card ── */
+.photo-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.photo-img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.photo-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.photo-btn {
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1.5px solid var(--border-input);
+  border-radius: var(--radius-xs);
+  padding: 7px 14px;
+  cursor: pointer;
+  min-height: 34px;
+  transition: opacity 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.photo-btn--remove {
+  background: var(--red-bg);
+  color: var(--red-text);
+  border-color: transparent;
+}
+
+.photo-btn:active {
+  opacity: 0.65;
+}
+
+.add-photo-btn {
+  width: 100%;
+  padding: 14px;
+  border: 1.5px dashed var(--border-input);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.add-photo-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* ── Tablet / desktop adjustments ── */
@@ -580,8 +673,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
     padding: 20px 28px 0;
   }
 
-  .fab {
-    /* Keep FAB within the 600px container */
+  .fab-group {
     right: calc(max(24px, (100vw - 600px) / 2 + 24px));
   }
 }
