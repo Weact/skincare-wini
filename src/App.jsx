@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import ProductCard from './components/ProductCard'
-import { loadProducts, saveProducts } from './utils/storage'
+import AuthButton from './components/AuthButton'
+import { useAuth } from './hooks/useAuth'
+import { useProducts } from './hooks/useProducts'
 import { resizeImage } from './utils/imageUtils'
 import './App.css'
 
@@ -9,9 +11,10 @@ function generateId() {
 }
 
 export default function App() {
-  const [products, setProducts] = useState(() => loadProducts())
+  const { user, linkWithGoogle, handleSignOut } = useAuth()
+  const { products, addProduct, updateProduct, deleteProduct } = useProducts(user?.uid)
   const [newProductId, setNewProductId] = useState(null)
-  const isFirstRender = useRef(true)
+  const photoInputRef = useRef(null)
 
   const [theme, setTheme] = useState(
     () => document.documentElement.getAttribute('data-theme') || 'light'
@@ -24,20 +27,9 @@ export default function App() {
       theme === 'dark' ? '#100e1a' : '#faf7f5'
   }, [theme])
 
-  useEffect(() => {
-    // Skip saving on initial load (we just loaded from storage)
-    if (isFirstRender.current) {
-      isFirstRender.current = false
-      return
-    }
-    saveProducts(products)
-  }, [products])
-
-  const photoInputRef = useRef(null)
-
-  function addProduct(photo = null) {
+  async function handleAddProduct(photo = null) {
     const id = generateId()
-    const product = {
+    await addProduct({
       id,
       name: '',
       openingDate: null,
@@ -45,8 +37,7 @@ export default function App() {
       usageMonths: null,
       photo,
       createdAt: new Date().toISOString(),
-    }
-    setProducts(prev => [product, ...prev])
+    })
     setNewProductId(id)
   }
 
@@ -55,15 +46,7 @@ export default function App() {
     if (!file) return
     e.target.value = ''
     const photo = await resizeImage(file)
-    addProduct(photo)
-  }
-
-  function updateProduct(id, updates) {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
-  }
-
-  function deleteProduct(id) {
-    setProducts(prev => prev.filter(p => p.id !== id))
+    handleAddProduct(photo)
   }
 
   return (
@@ -75,26 +58,39 @@ export default function App() {
             {products.length} {products.length === 1 ? 'product' : 'products'}
           </span>
         </div>
-        <button
-          className="theme-toggle"
-          onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-          aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-        >
-          {theme === 'light' ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/>
-              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          )}
-        </button>
+        <div className="app-header-right">
+          <AuthButton
+            user={user}
+            onLinkGoogle={linkWithGoogle}
+            onSignOut={handleSignOut}
+          />
+          <button
+            className="theme-toggle"
+            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+            aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            {theme === 'light' ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            )}
+          </button>
+        </div>
       </header>
 
       <main className="app-main">
-        {products.length === 0 ? (
+        {user === undefined ? (
+          <div className="app-loading">
+            <div className="loading-dot" />
+            <div className="loading-dot" />
+            <div className="loading-dot" />
+          </div>
+        ) : products.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">🧴</div>
             <p className="empty-title">No products yet</p>
@@ -127,7 +123,7 @@ export default function App() {
             <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2"/>
           </svg>
         </button>
-        <button className="fab" onClick={() => addProduct()} aria-label="Add product">
+        <button className="fab" onClick={() => handleAddProduct()} aria-label="Add product">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
           </svg>
