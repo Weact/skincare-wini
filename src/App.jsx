@@ -6,6 +6,7 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  DragOverlay,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -17,11 +18,13 @@ import { CSS } from '@dnd-kit/utilities'
 import ProductCard from './components/ProductCard'
 import CategorySection from './components/CategorySection'
 import AuthButton from './components/AuthButton'
+import ChangelogModal from './components/ChangelogModal'
 import { useAuth } from './hooks/useAuth'
 import { useProducts } from './hooks/useProducts'
 import { useCategories } from './hooks/useCategories'
 import { resizeImage } from './utils/imageUtils'
 import { CATEGORY_EMOJIS, PRESET_CATEGORIES } from './constants'
+import { LATEST_VERSION } from './changelog'
 import './App.css'
 
 function generateId() {
@@ -69,9 +72,11 @@ function groupProducts(products, categories) {
 
 export default function App() {
   const { user, linkWithGoogle, handleSignOut } = useAuth()
-  const { products, addProduct, updateProduct, deleteProduct, reorderProductsInCategory } = useProducts(user?.uid)
+  const { products, addProduct, updateProduct, deleteProduct, reorderProductsInCategory, moveProductToCategory } = useProducts(user?.uid)
   const { categories, addCategory, updateCategory, deleteCategory, reorderCategories } = useCategories(user?.uid)
   const [newProductId, setNewProductId] = useState(null)
+  const [activeId, setActiveId] = useState(null)
+  const [liveProducts, setLiveProducts] = useState(null)
   const photoInputRef = useRef(null)
 
   // New category form state
@@ -80,6 +85,17 @@ export default function App() {
   const [newCatEmoji, setNewCatEmoji] = useState('')
   const [showNewCatEmoji, setShowNewCatEmoji] = useState(false)
   const newCatEmojiRef = useRef(null)
+
+  const [showChangelog, setShowChangelog] = useState(false)
+  const [changelogIsNew, setChangelogIsNew] = useState(
+    () => localStorage.getItem('lastSeenChangelog') !== LATEST_VERSION
+  )
+
+  function openChangelog() {
+    setShowChangelog(true)
+    setChangelogIsNew(false)
+    localStorage.setItem('lastSeenChangelog', LATEST_VERSION)
+  }
 
   const [theme, setTheme] = useState(
     () => document.documentElement.getAttribute('data-theme') || 'light'
@@ -145,38 +161,101 @@ export default function App() {
     setShowNewCatEmoji(false)
   }
 
-  function handleDragEnd({ active, over }) {
-    if (!over || active.id === over.id) return
+  function handleDragStart({ active }) {
+    setActiveId(String(active.id))
+  }
+
+  function handleDragOver({ active, over }) {
+    if (!over) return
     const aId = String(active.id)
     const oId = String(over.id)
+    if (!aId.startsWith('prod-')) return
 
-    if (aId.startsWith('cat-') && oId.startsWith('cat-')) {
+    const fromId = aId.slice(5)
+
+    setLiveProducts(prev => {
+      const current = prev ?? products
+      const fromProd = current.find(p => p.id === fromId)
+      if (!fromProd) return prev
+
+      let toCatId
+      let insertBeforeId = null
+
+      if (oId.startsWith('prod-')) {
+        const toId = oId.slice(5)
+        if (toId === fromId) return prev
+        const toProd = current.find(p => p.id === toId)
+        if (!toProd) return prev
+        toCatId = toProd.categoryId || null
+        insertBeforeId = toId
+      } else if (oId.startsWith('cat-')) {
+        toCatId = oId.slice(4)
+      } else {
+        return prev
+      }
+
+      const without = current.filter(p => p.id !== fromId)
+      const targetProds = without
+        .filter(p => (p.categoryId || null) === toCatId)
+        .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
+
+      const movedProd = { ...fromProd, categoryId: toCatId }
+      const idx = insertBeforeId ? targetProds.findIndex(p => p.id === insertBeforeId) : -1
+      targetProds.splice(idx === -1 ? targetProds.length : idx, 0, movedProd)
+
+      const updated = targetProds.map((p, i) => ({ ...p, order: i }))
+      const rest = without.filter(p => (p.categoryId || null) !== toCatId)
+      return [...rest, ...updated]
+    })
+  }
+
+  function handleDragEnd({ active, over }) {
+    setActiveId(null)
+    const aId = String(active.id)
+
+    // ── Reorder categories ──
+    if (aId.startsWith('cat-')) {
+      setLiveProducts(null)
+      if (!over || aId === String(over.id)) return
+      const oId = String(over.id)
+      if (!oId.startsWith('cat-')) return
       const from = categories.findIndex(c => `cat-${c.id}` === aId)
       const to = categories.findIndex(c => `cat-${c.id}` === oId)
       if (from !== -1 && to !== -1) reorderCategories(arrayMove([...categories], from, to))
       return
     }
 
-    if (aId.startsWith('prod-') && oId.startsWith('prod-')) {
+    // ── Persist product drag from liveProducts ──
+    if (aId.startsWith('prod-') && liveProducts && over) {
       const fromId = aId.slice(5)
-      const toId = oId.slice(5)
-      const fromProd = products.find(p => p.id === fromId)
-      const toProd = products.find(p => p.id === toId)
-      if (!fromProd || !toProd) return
-      if ((fromProd.categoryId || null) !== (toProd.categoryId || null)) return
+      const origProd = products.find(p => p.id === fromId)
+      const liveProd = liveProducts.find(p => p.id === fromId)
 
-      const catId = fromProd.categoryId || null
-      const grouped = products
-        .filter(p => (p.categoryId || null) === catId)
-        .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
+      if (origProd && liveProd) {
+        const toCatId = liveProd.categoryId || null
+        const fromCatId = origProd.categoryId || null
 
-      const from = grouped.findIndex(p => p.id === fromId)
-      const to = grouped.findIndex(p => p.id === toId)
-      if (from !== -1 && to !== -1) reorderProductsInCategory(arrayMove([...grouped], from, to))
+        const targetOrdered = liveProducts
+          .filter(p => (p.categoryId || null) === toCatId)
+          .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
+
+        if (fromCatId !== toCatId) {
+          moveProductToCategory(fromId, toCatId, targetOrdered)
+          const sourceOrdered = liveProducts
+            .filter(p => (p.categoryId || null) === fromCatId)
+            .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
+          if (sourceOrdered.length > 0) reorderProductsInCategory(sourceOrdered)
+        } else {
+          reorderProductsInCategory(targetOrdered)
+        }
+      }
     }
+
+    setLiveProducts(null)
   }
 
-  const grouped = groupProducts(products, categories)
+  const displayProducts = liveProducts ?? products
+  const grouped = groupProducts(displayProducts, categories)
   const categoryIds = categories.map(c => `cat-${c.id}`)
   const uncategorized = grouped.__none || []
   const unusedPresets = PRESET_CATEGORIES.filter(
@@ -193,6 +272,12 @@ export default function App() {
           </span>
         </div>
         <div className="app-header-right">
+          <button className="changelog-btn" onClick={openChangelog} aria-label="What's new">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+            </svg>
+            {changelogIsNew && <span className="changelog-dot" />}
+          </button>
           <AuthButton user={user} onLinkGoogle={linkWithGoogle} onSignOut={handleSignOut} />
           <button
             className="theme-toggle"
@@ -287,7 +372,7 @@ export default function App() {
             ) : categories.length === 0 ? (
               /* Flat list — no categories created yet */
               <ul className="product-list">
-                {[...products]
+                {[...displayProducts]
                   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                   .map(product => (
                     <li key={product.id}>
@@ -303,7 +388,14 @@ export default function App() {
               </ul>
             ) : (
               /* Grouped view with drag-and-drop */
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+                onDragCancel={() => { setActiveId(null); setLiveProducts(null) }}
+              >
                 <SortableContext items={categoryIds} strategy={verticalListSortingStrategy}>
                   {categories.map(cat => (
                     <SortableCategory
@@ -333,6 +425,32 @@ export default function App() {
                     newProductId={newProductId}
                   />
                 )}
+
+                <DragOverlay>
+                  {activeId?.startsWith('prod-') && (() => {
+                    const p = products.find(p => p.id === activeId.slice(5))
+                    return p ? (
+                      <div className="dnd-overlay">
+                        <ProductCard
+                          product={p}
+                          onUpdate={() => {}}
+                          onDelete={() => {}}
+                          startExpanded={false}
+                          categories={categories}
+                        />
+                      </div>
+                    ) : null
+                  })()}
+                  {activeId?.startsWith('cat-') && (() => {
+                    const c = categories.find(c => `cat-${c.id}` === activeId)
+                    return c ? (
+                      <div className="dnd-overlay cat-overlay-card">
+                        {c.emoji && <span className="cat-emoji">{c.emoji}</span>}
+                        <span className="cat-name">{c.name}</span>
+                      </div>
+                    ) : null
+                  })()}
+                </DragOverlay>
               </DndContext>
             )}
           </>
@@ -354,6 +472,10 @@ export default function App() {
       </div>
 
       <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFAB} />
+
+      {showChangelog && (
+        <ChangelogModal onClose={() => setShowChangelog(false)} />
+      )}
     </div>
   )
 }

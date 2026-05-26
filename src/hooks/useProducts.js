@@ -62,5 +62,15 @@ export function useProducts(userId) {
     await batch.commit()
   }
 
-  return { products, addProduct, updateProduct, deleteProduct, reorderProductsInCategory }
+  async function moveProductToCategory(productId, newCategoryId, orderedProducts) {
+    const batch = writeBatch(db)
+    orderedProducts.forEach((product, index) => {
+      const updates = { order: index }
+      if (product.id === productId) updates.categoryId = newCategoryId
+      batch.set(doc(db, 'users', userId, 'products', product.id), updates, { merge: true })
+    })
+    await batch.commit()
+  }
+
+  return { products, addProduct, updateProduct, deleteProduct, reorderProductsInCategory, moveProductToCategory }
 }
