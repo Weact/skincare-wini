@@ -1,0 +1,587 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #faf7f5;
+  --surface: #ffffff;
+  --border: #ede9e6;
+  --border-input: #ddd8d4;
+
+  --primary: #c8727a;
+  --primary-light: #faeef0;
+  --primary-shadow: rgba(200, 114, 122, 0.35);
+
+  --sage: #5d9e6a;
+  --sage-bg: #eaf4ec;
+  --sage-text: #3d7a49;
+
+  --amber: #c97d0a;
+  --amber-bg: #fdf3e0;
+  --amber-text: #9a5e05;
+
+  --red: #c04040;
+  --red-bg: #fce8e8;
+  --red-text: #a03030;
+
+  --sealed: #7a8fa0;
+  --sealed-bg: #edf1f5;
+  --sealed-text: #5a6e80;
+
+  --text: #1c1c2e;
+  --text-muted: #7a7a8e;
+  --text-light: #a8a8bb;
+
+  --radius: 18px;
+  --radius-sm: 12px;
+  --radius-xs: 8px;
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] {
+  --bg: #100e1a;
+  --surface: #1c1828;
+  --border: #2c2840;
+  --border-input: #3a3458;
+
+  --primary: #e08890;
+  --primary-light: #30141a;
+  --primary-shadow: rgba(224, 136, 144, 0.45);
+
+  --sage: #6ec07e;
+  --sage-bg: #0c2214;
+  --sage-text: #6ec07e;
+
+  --amber: #eeaa44;
+  --amber-bg: #221400;
+  --amber-text: #eeaa44;
+
+  --red: #e06868;
+  --red-bg: #220808;
+  --red-text: #e06868;
+
+  --sealed: #7888a0;
+  --sealed-bg: #141c2a;
+  --sealed-text: #7888a0;
+
+  --text: #ede8f8;
+  --text-muted: #8880a8;
+  --text-light: #504870;
+
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+html {
+  background: var(--bg);
+  /* Prevent overscroll bounce showing white on iOS */
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  min-height: 100dvh;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+/* ── App shell ── */
+.app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 600px;
+  margin: 0 auto;
+  /* Space for FAB */
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+
+/* ── Header ── */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 14px;
+  padding-top: calc(16px + env(safe-area-inset-top));
+  border-bottom: 1px solid var(--border);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+}
+
+.app-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.theme-toggle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.theme-toggle:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.theme-toggle:active {
+  opacity: 0.7;
+}
+
+.app-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--primary);
+}
+
+.app-count {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* ── Main ── */
+.app-main {
+  flex: 1;
+  padding: 16px 16px 0;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 80px 32px;
+  gap: 8px;
+}
+
+.empty-icon {
+  font-size: 60px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.empty-title {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empty-text {
+  font-size: 15px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  max-width: 240px;
+}
+
+/* ── Product list ── */
+.product-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Card ── */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.card--expired {
+  opacity: 0.72;
+}
+
+/* Card header (collapsed/always visible) */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  gap: 10px;
+  cursor: pointer;
+  min-height: 58px;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.card-header:active {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Status dot */
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot--sealed  { background: var(--sealed); }
+.status-dot--open    { background: var(--sage); }
+.status-dot--expiring { background: var(--amber); }
+.status-dot--expired { background: var(--red); }
+
+/* Product name in header */
+.card-name {
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.1px;
+}
+
+.card-name-empty {
+  color: var(--text-light);
+  font-weight: 400;
+}
+
+.card-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.card-dates {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Status badge */
+.badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+  letter-spacing: 0.1px;
+}
+
+.badge--sealed   { background: var(--sealed-bg);  color: var(--sealed-text); }
+.badge--open     { background: var(--sage-bg);     color: var(--sage-text); }
+.badge--expiring { background: var(--amber-bg);    color: var(--amber-text); }
+.badge--expired  { background: var(--red-bg);      color: var(--red-text); }
+
+/* Expand chevron */
+.chevron {
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.chevron--up {
+  transform: rotate(180deg);
+}
+
+/* ── Card body (expanded) ── */
+.card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Form fields ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-bottom: 2px;
+}
+
+.field-input {
+  /* 16px prevents iOS Safari from zooming on focus */
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1.5px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  width: 100%;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 0.15s;
+  min-height: 46px;
+}
+
+.field-input::placeholder {
+  color: var(--text-light);
+}
+
+.field-input:focus {
+  border-color: var(--primary);
+  background: var(--surface);
+}
+
+/* Date input: keep consistent on iOS */
+input[type="date"].field-input {
+  color: var(--text);
+}
+
+input[type="date"].field-input::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+/* Select: custom arrow */
+.field-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%23a8a8bb' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+/* ── Custom date input ── */
+.date-field {
+  position: relative;
+}
+
+.date-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  padding: 11px 13px;
+  border: 1.5px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 46px;
+  /* Let clicks fall through to the native input on top */
+  pointer-events: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.date-field:focus-within .date-display {
+  border-color: var(--primary);
+  background: var(--surface);
+}
+
+.date-placeholder {
+  color: var(--text-light);
+}
+
+.date-icon {
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+
+/* Transparent native input sits on top — its text is invisible, but it
+   receives clicks/taps and opens the OS date picker */
+.date-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px; /* prevent iOS zoom */
+  border: none;
+  background: transparent;
+}
+
+/* ── Suggestion banner ── */
+.suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--amber-bg);
+  border: 1.5px solid #f0d078;
+  border-radius: var(--radius-sm);
+  padding: 13px;
+}
+
+.suggestion-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.suggestion-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.suggestion-text {
+  font-size: 14px;
+  color: #7a5000;
+  line-height: 1.4;
+}
+
+.suggestion-text strong {
+  color: #5a3800;
+}
+
+.suggestion-sub {
+  font-size: 12px;
+  color: var(--amber-text);
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.suggestion-btn {
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-xs);
+  padding: 7px 16px;
+  cursor: pointer;
+  min-height: 36px;
+  transition: opacity 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.suggestion-btn:active {
+  opacity: 0.65;
+}
+
+.suggestion-btn--apply {
+  background: var(--amber);
+  color: #fff;
+}
+
+.suggestion-btn--skip {
+  background: rgba(0, 0, 0, 0.07);
+  color: var(--text-muted);
+}
+
+/* ── Delete button ── */
+.delete-btn {
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 500;
+  background: var(--red-bg);
+  color: var(--red);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  width: 100%;
+  cursor: pointer;
+  min-height: 46px;
+  transition: background 0.15s, opacity 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  margin-top: 2px;
+}
+
+.delete-btn--confirm {
+  background: var(--red);
+  color: #fff;
+  font-weight: 600;
+}
+
+.delete-btn:active {
+  opacity: 0.7;
+}
+
+/* ── FAB ── */
+.fab {
+  position: fixed;
+  bottom: calc(28px + env(safe-area-inset-bottom));
+  right: 24px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: none;
+  box-shadow: 0 4px 18px var(--primary-shadow);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fab:active {
+  transform: scale(0.9);
+  box-shadow: 0 2px 8px var(--primary-shadow);
+}
+
+/* ── Tablet / desktop adjustments ── */
+@media (min-width: 640px) {
+  .app-header {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .app-main {
+    padding: 20px 28px 0;
+  }
+
+  .fab {
+    /* Keep FAB within the 600px container */
+    right: calc(max(24px, (100vw - 600px) / 2 + 24px));
+  }
+}
