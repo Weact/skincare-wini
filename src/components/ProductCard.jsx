@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { addMonths, formatDisplayDate, getProductStatus } from '../utils/dateUtils'
@@ -30,18 +30,19 @@ function tagDot(color) {
   return isPresetColor(color) ? TAG_COLORS.find(c => c.key === color).dot : color
 }
 
-// A single draggable tag chip in the edit form — reorderable via SortableContext
-function SortableTagChip({ tag, colorPickerFor, setColorPickerFor, removeTag, setTagColor, setCustomColorTag, customColorInputRef }) {
+// A single draggable tag chip in the edit form — reorderable via SortableContext.
+// The colour picker itself lives in a shared bottom sheet (see ProductCard), not
+// anchored to the chip, so it can never be clipped off-screen on narrow viewports.
+function SortableTagChip({ tag, onOpenColorPicker, removeTag }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tag.name })
 
   return (
     <span
       ref={setNodeRef}
-      className={`tag-chip tag-chip--removable${isPresetColor(tag.color) ? ` tag-chip--${tag.color}` : ''}`}
+      className={`tag-chip tag-chip--removable${isPresetColor(tag.color) ? ` tag-chip--${tag.color}` : ''}${isDragging ? ' tag-chip--dragging' : ''}`}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
         ...(isPresetColor(tag.color) ? null : { color: tag.color, background: `${tag.color}22` }),
       }}
       {...attributes}
@@ -52,7 +53,7 @@ function SortableTagChip({ tag, colorPickerFor, setColorPickerFor, removeTag, se
         className="tag-color-dot"
         style={{ background: tagDot(tag.color) }}
         onPointerDown={e => e.stopPropagation()}
-        onClick={() => setColorPickerFor(f => f === tag.name ? null : tag.name)}
+        onClick={() => onOpenColorPicker(tag.name)}
         aria-label={`Change colour for ${tag.name}`}
       />
       {tag.name}
@@ -65,28 +66,19 @@ function SortableTagChip({ tag, colorPickerFor, setColorPickerFor, removeTag, se
       >
         ✕
       </button>
-      {colorPickerFor === tag.name && (
-        <div className="tag-color-picker" onPointerDown={e => e.stopPropagation()}>
-          {TAG_COLORS.map(c => (
-            <button
-              key={c.key}
-              type="button"
-              className={`tag-color-swatch${tag.color === c.key ? ' tag-color-swatch--active' : ''}`}
-              style={{ background: c.dot }}
-              onClick={() => setTagColor(tag.name, c.key)}
-              aria-label={c.key}
-            />
-          ))}
-          <button
-            type="button"
-            className={`tag-color-swatch tag-color-swatch--custom${!isPresetColor(tag.color) ? ' tag-color-swatch--active' : ''}`}
-            onClick={() => { setCustomColorTag(tag.name); customColorInputRef.current?.click() }}
-            aria-label="Custom colour"
-          >
-            +
-          </button>
-        </div>
-      )}
+    </span>
+  )
+}
+
+// Static (non-interactive) preview shown under the pointer while a tag is being dragged
+function TagChipPreview({ tag }) {
+  return (
+    <span
+      className={`tag-chip tag-chip--overlay${isPresetColor(tag.color) ? ` tag-chip--${tag.color}` : ''}`}
+      style={isPresetColor(tag.color) ? undefined : { color: tag.color, background: `${tag.color}22` }}
+    >
+      <span className="tag-color-dot" style={{ background: tagDot(tag.color) }} />
+      {tag.name}
     </span>
   )
 }
@@ -99,13 +91,13 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [tagInput, setTagInput] = useState('')
   const [colorPickerFor, setColorPickerFor] = useState(null)
-  const [customColorTag, setCustomColorTag] = useState(null)
+  const [hexDraft, setHexDraft] = useState('')
+  const [activeTagId, setActiveTagId] = useState(null)
   const nameRef = useRef(null)
   const debounceRef = useRef(null)
   const confirmTimerRef = useRef(null)
   const photoInputRef = useRef(null)
-  const tagsWrapRef = useRef(null)
-  const customColorInputRef = useRef(null)
+  const hexInputRef = useRef(null)
 
   // Normalise legacy plain-string tags (pre-colour) into { name, color } objects
   const tags = (product.tags || []).map(t =>
@@ -124,28 +116,49 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
 
   function removeTag(name) {
     onUpdate({ tags: tags.filter(t => t.name !== name) })
-    setColorPickerFor(null)
+    closeColorPicker()
   }
 
   function setTagColor(name, color) {
     onUpdate({ tags: tags.map(t => t.name === name ? { ...t, color } : t) })
+    closeColorPicker()
+  }
+
+  function closeColorPicker() {
     setColorPickerFor(null)
+    setHexDraft('')
   }
 
-  // Used by the native colour input while its dialog is open — must NOT close
-  // the popover or change colorPickerFor, or the controlled `value` below
-  // would snap back to its fallback mid-pick and the native dialog stops
-  // reporting further changes.
-  function updateCustomTagColor(name, color) {
-    onUpdate({ tags: tags.map(t => t.name === name ? { ...t, color } : t) })
+  // input[type=color] has no native picker UI on iOS (Safari and Chrome are
+  // both WebKit there), so custom colours are entered as plain hex instead —
+  // works identically on every platform. Applies live as soon as all 6 hex
+  // digits are typed, without closing the sheet, so the user can keep tweaking.
+  function handleHexChange(e) {
+    const raw = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6)
+    setHexDraft(raw)
+    if (raw.length === 6 && colorPickerFor) {
+      onUpdate({ tags: tags.map(t => t.name === colorPickerFor ? { ...t, color: `#${raw.toLowerCase()}` } : t) })
+    }
   }
 
+  // PointerSensor (not Mouse+TouchSensor) so the nested colour-dot/remove
+  // buttons' onPointerDown stopPropagation actually works on touch devices —
+  // TouchSensor listens for the separate `touchstart` event, which a
+  // stopPropagation() on pointerdown never blocks, letting a tap on those
+  // buttons get hijacked as a drag attempt on iOS.
   const tagSensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   )
 
+  function handleTagDragStart({ active }) {
+    setActiveTagId(active.id)
+    // Haptic tick on drag pickup — Android Chrome only, iOS Safari/Chrome has
+    // no Vibration API at all, so this silently no-ops there.
+    if (navigator.vibrate) navigator.vibrate(10)
+  }
+
   function handleTagDragEnd({ active, over }) {
+    setActiveTagId(null)
     if (!over || active.id === over.id) return
     const oldIndex = tags.findIndex(t => t.name === active.id)
     const newIndex = tags.findIndex(t => t.name === over.id)
@@ -162,26 +175,17 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
     }
   }
 
-  // Close the colour picker popover on outside click
-  useEffect(() => {
-    function handle(e) {
-      if (tagsWrapRef.current && !tagsWrapRef.current.contains(e.target)) {
-        setColorPickerFor(null)
-        setCustomColorTag(null)
-      }
-    }
-    document.addEventListener('mousedown', handle)
-    document.addEventListener('touchstart', handle)
-    return () => {
-      document.removeEventListener('mousedown', handle)
-      document.removeEventListener('touchstart', handle)
-    }
-  }, [])
+  const colorPickerTagObj = tags.find(t => t.name === colorPickerFor)
 
-  const customColorTagObj = tags.find(t => t.name === customColorTag)
-  const customColorTagValue = customColorTagObj && !isPresetColor(customColorTagObj.color)
-    ? customColorTagObj.color
-    : '#c8727a'
+  // Pre-fill the hex field with the tag's current custom colour when its sheet opens
+  useEffect(() => {
+    if (colorPickerTagObj && !isPresetColor(colorPickerTagObj.color)) {
+      setHexDraft(colorPickerTagObj.color.replace('#', ''))
+    } else {
+      setHexDraft('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colorPickerFor])
 
   const tagSuggestions = allTags
     .filter(t => !tags.some(existing => existing.name.toLowerCase() === t.toLowerCase()))
@@ -381,22 +385,30 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
 
           <div className="field">
             <label className="field-label">Tags</label>
-            <div className="tags-input-wrap" ref={tagsWrapRef}>
-              <DndContext sensors={tagSensors} collisionDetection={closestCenter} onDragEnd={handleTagDragEnd}>
+            <div className="tags-input-wrap">
+              <DndContext
+                sensors={tagSensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleTagDragStart}
+                onDragEnd={handleTagDragEnd}
+                onDragCancel={() => setActiveTagId(null)}
+              >
                 <SortableContext items={tags.map(t => t.name)} strategy={rectSortingStrategy}>
                   {tags.map(tag => (
                     <SortableTagChip
                       key={tag.name}
                       tag={tag}
-                      colorPickerFor={colorPickerFor}
-                      setColorPickerFor={setColorPickerFor}
+                      onOpenColorPicker={setColorPickerFor}
                       removeTag={removeTag}
-                      setTagColor={setTagColor}
-                      setCustomColorTag={setCustomColorTag}
-                      customColorInputRef={customColorInputRef}
                     />
                   ))}
                 </SortableContext>
+                <DragOverlay>
+                  {activeTagId && (() => {
+                    const draggedTag = tags.find(t => t.name === activeTagId)
+                    return draggedTag ? <TagChipPreview tag={draggedTag} /> : null
+                  })()}
+                </DragOverlay>
               </DndContext>
               <input
                 type="text"
@@ -405,13 +417,6 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
                 onChange={e => setTagInput(e.target.value)}
                 onKeyDown={handleTagKeyDown}
                 placeholder={tags.length ? 'Add tag…' : 'e.g. Travel size, Gift, Holy grail'}
-              />
-              <input
-                ref={customColorInputRef}
-                type="color"
-                value={customColorTagValue}
-                onChange={e => customColorTag && updateCustomTagColor(customColorTag, e.target.value)}
-                style={{ display: 'none' }}
               />
             </div>
             {tagSuggestions.length > 0 && (
@@ -429,6 +434,65 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
               </div>
             )}
           </div>
+
+          {colorPickerFor && (
+            <div className="modal-backdrop" onClick={closeColorPicker}>
+              <div className="modal-sheet modal-sheet--tag-color" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <span className="modal-title">Colour for "{colorPickerFor}"</span>
+                  <button className="modal-close" onClick={closeColorPicker} aria-label="Close">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                </div>
+                <div className="modal-body">
+                  <div className="tag-color-grid">
+                    {TAG_COLORS.map(c => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        className={`tag-color-swatch${colorPickerTagObj?.color === c.key ? ' tag-color-swatch--active' : ''}`}
+                        style={{ background: c.dot }}
+                        onClick={() => setTagColor(colorPickerFor, c.key)}
+                        aria-label={c.key}
+                      />
+                    ))}
+                    <button
+                      type="button"
+                      className={`tag-color-swatch tag-color-swatch--custom${colorPickerTagObj && !isPresetColor(colorPickerTagObj.color) ? ' tag-color-swatch--active' : ''}`}
+                      onClick={() => hexInputRef.current?.focus()}
+                      aria-label="Custom colour"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="tag-hex-row">
+                    <span
+                      className="tag-hex-preview"
+                      style={{ background: hexDraft.length === 6 ? `#${hexDraft}` : 'transparent' }}
+                    />
+                    <div className="tag-hex-input-wrap">
+                      <span className="tag-hex-prefix">#</span>
+                      <input
+                        ref={hexInputRef}
+                        type="text"
+                        inputMode="text"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        className="tag-hex-input"
+                        value={hexDraft}
+                        onChange={handleHexChange}
+                        placeholder="a1b2c3"
+                        maxLength={6}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="field">
             <label className="field-label">Product name</label>
