@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import ProductCard from './ProductCard'
 import { CATEGORY_EMOJIS } from '../constants'
 
-function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categories }) {
+function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categories, allTags }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `prod-${product.id}`,
   })
@@ -19,6 +19,7 @@ function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categ
         onDelete={onDelete}
         startExpanded={startExpanded}
         categories={categories}
+        allTags={allTags}
         dragHandleProps={{ ...attributes, ...listeners }}
       />
     </li>
@@ -29,6 +30,7 @@ export default function CategorySection({
   category,           // null = uncategorized section
   products,
   categories,         // all categories, for the product card dropdown
+  allTags = [],        // all tags in use, for the product card tag suggestions
   onUpdateProduct,
   onDeleteProduct,
   onUpdateCategory,
@@ -186,6 +188,7 @@ export default function CategorySection({
                 onDelete={() => onDeleteProduct(product.id)}
                 startExpanded={product.id === newProductId}
                 categories={categories}
+                allTags={allTags}
               />
             ))}
           </ul>

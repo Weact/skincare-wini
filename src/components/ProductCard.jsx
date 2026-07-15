@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
+import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { addMonths, formatDisplayDate, getProductStatus } from '../utils/dateUtils'
 import { resizeImage } from '../utils/imageUtils'
+import { TAG_COLORS } from '../constants'
 import DateInput from './DateInput'
 
 const USAGE_OPTIONS = [
@@ -10,16 +14,179 @@ const USAGE_OPTIONS = [
   { value: 24, label: '24 months' },
 ]
 
-export default function ProductCard({ product, onUpdate, onDelete, startExpanded, categories = [], dragHandleProps }) {
+// Deterministic default colour so the same tag name doesn't jump colours on every add
+function defaultTagColor(name) {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0
+  return TAG_COLORS[hash % TAG_COLORS.length].key
+}
+
+// A tag colour is either a preset key (e.g. "sage") or a custom "#rrggbb" hex
+function isPresetColor(color) {
+  return TAG_COLORS.some(c => c.key === color)
+}
+
+function tagDot(color) {
+  return isPresetColor(color) ? TAG_COLORS.find(c => c.key === color).dot : color
+}
+
+// A single draggable tag chip in the edit form — reorderable via SortableContext
+function SortableTagChip({ tag, colorPickerFor, setColorPickerFor, removeTag, setTagColor, setCustomColorTag, customColorInputRef }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tag.name })
+
+  return (
+    <span
+      ref={setNodeRef}
+      className={`tag-chip tag-chip--removable${isPresetColor(tag.color) ? ` tag-chip--${tag.color}` : ''}`}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        ...(isPresetColor(tag.color) ? null : { color: tag.color, background: `${tag.color}22` }),
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <button
+        type="button"
+        className="tag-color-dot"
+        style={{ background: tagDot(tag.color) }}
+        onPointerDown={e => e.stopPropagation()}
+        onClick={() => setColorPickerFor(f => f === tag.name ? null : tag.name)}
+        aria-label={`Change colour for ${tag.name}`}
+      />
+      {tag.name}
+      <button
+        type="button"
+        className="tag-remove"
+        onPointerDown={e => e.stopPropagation()}
+        onClick={() => removeTag(tag.name)}
+        aria-label={`Remove ${tag.name} tag`}
+      >
+        ✕
+      </button>
+      {colorPickerFor === tag.name && (
+        <div className="tag-color-picker" onPointerDown={e => e.stopPropagation()}>
+          {TAG_COLORS.map(c => (
+            <button
+              key={c.key}
+              type="button"
+              className={`tag-color-swatch${tag.color === c.key ? ' tag-color-swatch--active' : ''}`}
+              style={{ background: c.dot }}
+              onClick={() => setTagColor(tag.name, c.key)}
+              aria-label={c.key}
+            />
+          ))}
+          <button
+            type="button"
+            className={`tag-color-swatch tag-color-swatch--custom${!isPresetColor(tag.color) ? ' tag-color-swatch--active' : ''}`}
+            onClick={() => { setCustomColorTag(tag.name); customColorInputRef.current?.click() }}
+            aria-label="Custom colour"
+          >
+            +
+          </button>
+        </div>
+      )}
+    </span>
+  )
+}
+
+export default function ProductCard({ product, onUpdate, onDelete, startExpanded, categories = [], allTags = [], dragHandleProps }) {
   const [expanded, setExpanded] = useState(startExpanded)
   const [name, setName] = useState(product.name || '')
   const [suggestion, setSuggestion] = useState(null)
   const [dismissedKey, setDismissedKey] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [tagInput, setTagInput] = useState('')
+  const [colorPickerFor, setColorPickerFor] = useState(null)
+  const [customColorTag, setCustomColorTag] = useState(null)
   const nameRef = useRef(null)
   const debounceRef = useRef(null)
   const confirmTimerRef = useRef(null)
   const photoInputRef = useRef(null)
+  const tagsWrapRef = useRef(null)
+  const customColorInputRef = useRef(null)
+
+  // Normalise legacy plain-string tags (pre-colour) into { name, color } objects
+  const tags = (product.tags || []).map(t =>
+    typeof t === 'string' ? { name: t, color: defaultTagColor(t) } : t
+  )
+
+  function addTag(raw) {
+    const val = raw.trim()
+    if (!val || tags.some(t => t.name.toLowerCase() === val.toLowerCase())) {
+      setTagInput('')
+      return
+    }
+    onUpdate({ tags: [...tags, { name: val, color: defaultTagColor(val) }] })
+    setTagInput('')
+  }
+
+  function removeTag(name) {
+    onUpdate({ tags: tags.filter(t => t.name !== name) })
+    setColorPickerFor(null)
+  }
+
+  function setTagColor(name, color) {
+    onUpdate({ tags: tags.map(t => t.name === name ? { ...t, color } : t) })
+    setColorPickerFor(null)
+  }
+
+  // Used by the native colour input while its dialog is open — must NOT close
+  // the popover or change colorPickerFor, or the controlled `value` below
+  // would snap back to its fallback mid-pick and the native dialog stops
+  // reporting further changes.
+  function updateCustomTagColor(name, color) {
+    onUpdate({ tags: tags.map(t => t.name === name ? { ...t, color } : t) })
+  }
+
+  const tagSensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  )
+
+  function handleTagDragEnd({ active, over }) {
+    if (!over || active.id === over.id) return
+    const oldIndex = tags.findIndex(t => t.name === active.id)
+    const newIndex = tags.findIndex(t => t.name === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    onUpdate({ tags: arrayMove(tags, oldIndex, newIndex) })
+  }
+
+  function handleTagKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      addTag(tagInput)
+    } else if (e.key === 'Backspace' && !tagInput && tags.length > 0) {
+      removeTag(tags[tags.length - 1].name)
+    }
+  }
+
+  // Close the colour picker popover on outside click
+  useEffect(() => {
+    function handle(e) {
+      if (tagsWrapRef.current && !tagsWrapRef.current.contains(e.target)) {
+        setColorPickerFor(null)
+        setCustomColorTag(null)
+      }
+    }
+    document.addEventListener('mousedown', handle)
+    document.addEventListener('touchstart', handle)
+    return () => {
+      document.removeEventListener('mousedown', handle)
+      document.removeEventListener('touchstart', handle)
+    }
+  }, [])
+
+  const customColorTagObj = tags.find(t => t.name === customColorTag)
+  const customColorTagValue = customColorTagObj && !isPresetColor(customColorTagObj.color)
+    ? customColorTagObj.color
+    : '#c8727a'
+
+  const tagSuggestions = allTags
+    .filter(t => !tags.some(existing => existing.name.toLowerCase() === t.toLowerCase()))
+    .filter(t => t.toLowerCase().includes(tagInput.toLowerCase()))
+    .slice(0, 6)
 
   async function handlePhotoChange(e) {
     const file = e.target.files?.[0]
@@ -135,6 +302,19 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
                 {product.expirationDate && `Exp ${formatDisplayDate(product.expirationDate)}`}
               </span>
             )}
+            {tags.length > 0 && (
+              <div className="card-tags">
+                {tags.map(tag => (
+                  <span
+                    key={tag.name}
+                    className={`tag-chip${isPresetColor(tag.color) ? ` tag-chip--${tag.color}` : ''}`}
+                    style={isPresetColor(tag.color) ? undefined : { color: tag.color, background: `${tag.color}22` }}
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="card-header-right">
@@ -198,6 +378,57 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
               </select>
             </div>
           )}
+
+          <div className="field">
+            <label className="field-label">Tags</label>
+            <div className="tags-input-wrap" ref={tagsWrapRef}>
+              <DndContext sensors={tagSensors} collisionDetection={closestCenter} onDragEnd={handleTagDragEnd}>
+                <SortableContext items={tags.map(t => t.name)} strategy={rectSortingStrategy}>
+                  {tags.map(tag => (
+                    <SortableTagChip
+                      key={tag.name}
+                      tag={tag}
+                      colorPickerFor={colorPickerFor}
+                      setColorPickerFor={setColorPickerFor}
+                      removeTag={removeTag}
+                      setTagColor={setTagColor}
+                      setCustomColorTag={setCustomColorTag}
+                      customColorInputRef={customColorInputRef}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+              <input
+                type="text"
+                className="tag-input"
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder={tags.length ? 'Add tag…' : 'e.g. Travel size, Gift, Holy grail'}
+              />
+              <input
+                ref={customColorInputRef}
+                type="color"
+                value={customColorTagValue}
+                onChange={e => customColorTag && updateCustomTagColor(customColorTag, e.target.value)}
+                style={{ display: 'none' }}
+              />
+            </div>
+            {tagSuggestions.length > 0 && (
+              <div className="tag-suggestions">
+                {tagSuggestions.map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    className="tag-suggestion-chip"
+                    onClick={() => addTag(t)}
+                  >
+                    + {t}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="field">
             <label className="field-label">Product name</label>

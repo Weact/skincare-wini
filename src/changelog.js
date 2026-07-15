@@ -1,5 +1,15 @@
 export const CHANGELOG = [
   {
+    version: '1.7',
+    date: 'Jul 2026',
+    entries: [
+      'Add custom tags to any product — e.g. Travel size, Gift, Holy grail',
+      'Pick a colour for each tag, from 8 presets or any custom colour',
+      'Drag tags to reorder them',
+      'Tag suggestions reuse names you\'ve already used on other products',
+    ],
+  },
+  {
     version: '1.6',
     date: 'May 2026',
     entries: [

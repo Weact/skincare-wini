@@ -274,6 +274,9 @@ export default function App() {
   const grouped = groupProducts(displayProducts, categories)
   const categoryIds = categories.map(c => `cat-${c.id}`)
   const uncategorized = grouped.__none || []
+  const allTags = [...new Set(
+    products.flatMap(p => (p.tags || []).map(t => typeof t === 'string' ? t : t.name))
+  )].sort((a, b) => a.localeCompare(b))
   const unusedPresets = PRESET_CATEGORIES.filter(
     p => !categories.some(c => c.name.toLowerCase() === p.name.toLowerCase())
   )
@@ -388,6 +391,7 @@ export default function App() {
                         onDelete={() => deleteProduct(product.id)}
                         startExpanded={product.id === newProductId}
                         categories={categories}
+                        allTags={allTags}
                       />
                     </li>
                   ))}
@@ -409,6 +413,7 @@ export default function App() {
                       category={cat}
                       products={grouped[cat.id] || []}
                       categories={categories}
+                      allTags={allTags}
                       onUpdateProduct={updateProduct}
                       onDeleteProduct={deleteProduct}
                       onUpdateCategory={updateCategory}
@@ -424,6 +429,7 @@ export default function App() {
                     category={null}
                     products={uncategorized}
                     categories={categories}
+                    allTags={allTags}
                     onUpdateProduct={updateProduct}
                     onDeleteProduct={deleteProduct}
                     onUpdateCategory={() => {}}
