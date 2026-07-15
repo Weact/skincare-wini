@@ -21,6 +21,7 @@ import CategorySection from './components/CategorySection'
 import AuthButton from './components/AuthButton'
 import ChangelogModal from './components/ChangelogModal'
 import SettingsPanel from './components/SettingsPanel'
+import Toast from './components/Toast'
 import { useAuth } from './hooks/useAuth'
 import { useProducts } from './hooks/useProducts'
 import { useCategories } from './hooks/useCategories'
@@ -131,7 +132,17 @@ export default function App() {
   const [activeId, setActiveId] = useState(null)
   const [liveProducts, setLiveProducts] = useState(null)
   const [liveCategoryOrder, setLiveCategoryOrder] = useState(null)
+  const [toast, setToast] = useState(null)
+  const toastTimerRef = useRef(null)
   const photoInputRef = useRef(null)
+
+  function showToast(message) {
+    clearTimeout(toastTimerRef.current)
+    setToast(message)
+    toastTimerRef.current = setTimeout(() => setToast(null), 2600)
+  }
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), [])
 
   // Drop the optimistic product-order preview once Firestore has confirmed
   // the same order — clearing it right on drop (the old behaviour) made the
@@ -222,6 +233,9 @@ export default function App() {
       usageMonths: null, photo, createdAt: new Date().toISOString(),
     })
     setNewProductId(id)
+    // New products always start uncategorized — there's no way yet to add
+    // directly into a specific category from the FABs
+    showToast('Added product to Uncategorized')
   }
 
   async function handlePhotoFAB(e) {
@@ -602,6 +616,8 @@ export default function App() {
       {showSettings && (
         <SettingsPanel settings={settings} onUpdate={updateSetting} onClose={() => setShowSettings(false)} />
       )}
+
+      <Toast message={toast} />
     </div>
   )
 }

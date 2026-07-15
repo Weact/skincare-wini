@@ -3,6 +3,7 @@ export const CHANGELOG = [
     version: '1.7',
     date: 'Jul 2026',
     entries: [
+      'Toast confirmation when adding a new product',
       'Add types within a category — sub-categories to organize products further',
       'Drag products into a type, or assign one from the product card',
       'Add custom tags to any product — e.g. Travel size, Gift, Holy grail',
