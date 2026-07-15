@@ -93,6 +93,7 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const [colorPickerFor, setColorPickerFor] = useState(null)
   const [hexDraft, setHexDraft] = useState('')
   const [activeTagId, setActiveTagId] = useState(null)
+  const [liveTagOrder, setLiveTagOrder] = useState(null)
   const nameRef = useRef(null)
   const debounceRef = useRef(null)
   const confirmTimerRef = useRef(null)
@@ -100,9 +101,26 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const hexInputRef = useRef(null)
 
   // Normalise legacy plain-string tags (pre-colour) into { name, color } objects
-  const tags = (product.tags || []).map(t =>
+  const baseTags = (product.tags || []).map(t =>
     typeof t === 'string' ? { name: t, color: defaultTagColor(t) } : t
   )
+
+  // While a drag reorder is in flight, render the predicted order immediately
+  // instead of waiting for the Firestore round-trip — otherwise the dropped
+  // chip snaps back to its old slot for a beat, then jumps once product.tags
+  // finally updates. Cleared automatically once the confirmed order matches.
+  const tags = liveTagOrder
+    ? liveTagOrder.map(name => baseTags.find(t => t.name === name)).filter(Boolean)
+    : baseTags
+
+  useEffect(() => {
+    if (!liveTagOrder) return
+    const confirmedOrder = baseTags.map(t => t.name)
+    const matches = confirmedOrder.length === liveTagOrder.length &&
+      confirmedOrder.every((n, i) => n === liveTagOrder[i])
+    if (matches) setLiveTagOrder(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.tags])
 
   function addTag(raw) {
     const val = raw.trim()
@@ -163,7 +181,9 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
     const oldIndex = tags.findIndex(t => t.name === active.id)
     const newIndex = tags.findIndex(t => t.name === over.id)
     if (oldIndex === -1 || newIndex === -1) return
-    onUpdate({ tags: arrayMove(tags, oldIndex, newIndex) })
+    const reordered = arrayMove(tags, oldIndex, newIndex)
+    setLiveTagOrder(reordered.map(t => t.name))
+    onUpdate({ tags: reordered })
   }
 
   function handleTagKeyDown(e) {
