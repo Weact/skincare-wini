@@ -83,7 +83,7 @@ function TagChipPreview({ tag }) {
   )
 }
 
-export default function ProductCard({ product, onUpdate, onDelete, startExpanded, categories = [], allTags = [], dragHandleProps }) {
+export default function ProductCard({ product, onUpdate, onDelete, startExpanded, categories = [], types = [], allTags = [], dragHandleProps }) {
   const [expanded, setExpanded] = useState(startExpanded)
   const [name, setName] = useState(product.name || '')
   const [suggestion, setSuggestion] = useState(null)
@@ -99,6 +99,8 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const confirmTimerRef = useRef(null)
   const photoInputRef = useRef(null)
   const hexInputRef = useRef(null)
+
+  const typesForCategory = types.filter(t => t.categoryId === product.categoryId)
 
   // Normalise legacy plain-string tags (pre-colour) into { name, color } objects
   const baseTags = (product.tags || []).map(t =>
@@ -391,12 +393,30 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
               <select
                 className="field-input field-select"
                 value={product.categoryId || ''}
-                onChange={e => onUpdate({ categoryId: e.target.value || null })}
+                onChange={e => onUpdate({ categoryId: e.target.value || null, typeId: null })}
               >
                 <option value="">Uncategorized</option>
                 {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>
                     {cat.emoji ? `${cat.emoji} ` : ''}{cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {product.categoryId && typesForCategory.length > 0 && (
+            <div className="field">
+              <label className="field-label">Type</label>
+              <select
+                className="field-input field-select"
+                value={product.typeId || ''}
+                onChange={e => onUpdate({ typeId: e.target.value || null })}
+              >
+                <option value="">No type</option>
+                {typesForCategory.map(type => (
+                  <option key={type.id} value={type.id}>
+                    {type.emoji ? `${type.emoji} ` : ''}{type.name}
                   </option>
                 ))}
               </select>

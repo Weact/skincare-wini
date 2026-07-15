@@ -318,7 +318,10 @@ body {
 /* ── Main ── */
 .app-main {
   flex: 1;
-  padding: 16px 16px 0;
+  /* Bottom padding clears the floating FAB cluster (2 x 60px buttons + gap +
+     28px offset) so short content — e.g. an empty type — never ends up with
+     its last controls crowded against/under the FABs */
+  padding: 16px 16px calc(200px + env(safe-area-inset-bottom));
 }
 
 /* ── Empty state ── */
@@ -1679,12 +1682,103 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   position: relative;
 }
 
+/* ── Category body (types + untyped products) ── */
+.cat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 /* ── Product list inside a category ── */
 .cat-products {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* ── New-type button & form (sub-category, indented under its category) ── */
+.new-type-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-light);
+  background: transparent;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  width: calc(100% - 18px);
+  margin-left: 18px;
+  cursor: pointer;
+  min-height: 38px;
+  transition: border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.new-type-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.new-type-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1.5px solid var(--border-input);
+  border-radius: var(--radius-xs);
+  padding: 6px 8px;
+  margin-left: 18px;
+  position: relative;
+}
+
+/* ── Type section (sub-category) ── */
+.type-section {
+  margin-left: 18px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+
+.type-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.type-header-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 3px 0;
+  cursor: pointer;
+  min-width: 0;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 28px;
+}
+
+.type-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.type-products {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 /* ── Product drag handle ── */
@@ -1876,7 +1970,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   }
 
   .app-main {
-    padding: 20px 28px 0;
+    padding: 20px 28px calc(200px + env(safe-area-inset-bottom));
   }
 
   .fab-group {

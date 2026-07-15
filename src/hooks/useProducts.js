@@ -62,15 +62,17 @@ export function useProducts(userId) {
     await batch.commit()
   }
 
-  async function moveProductToCategory(productId, newCategoryId, orderedProducts) {
+  // Moves one product into a new bucket (category and/or type) while
+  // renumbering the whole destination list in a single batch
+  async function moveProduct(productId, fieldUpdates, orderedProducts) {
     const batch = writeBatch(db)
     orderedProducts.forEach((product, index) => {
       const updates = { order: index }
-      if (product.id === productId) updates.categoryId = newCategoryId
+      if (product.id === productId) Object.assign(updates, fieldUpdates)
       batch.set(doc(db, 'users', userId, 'products', product.id), updates, { merge: true })
     })
     await batch.commit()
   }
 
-  return { products, addProduct, updateProduct, deleteProduct, reorderProductsInCategory, moveProductToCategory }
+  return { products, addProduct, updateProduct, deleteProduct, reorderProductsInCategory, moveProduct }
 }

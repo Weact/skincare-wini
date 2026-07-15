@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   DndContext,
-  closestCenter,
+  pointerWithin,
+  rectIntersection,
   MouseSensor,
   TouchSensor,
   useSensor,
@@ -23,6 +24,7 @@ import SettingsPanel from './components/SettingsPanel'
 import { useAuth } from './hooks/useAuth'
 import { useProducts } from './hooks/useProducts'
 import { useCategories } from './hooks/useCategories'
+import { useTypes } from './hooks/useTypes'
 import { resizeImage } from './utils/imageUtils'
 import { CATEGORY_EMOJIS, PRESET_CATEGORIES } from './constants'
 import { LATEST_VERSION } from './changelog'
@@ -30,6 +32,20 @@ import './App.css'
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)
+}
+
+// With three nesting tiers now (category > type > product), pure centre-
+// distance matching (closestCenter) gets unstable — a type section's rect
+// can span much more area than the specific product under the cursor, so
+// its centre can "win" even while hovering directly over a product inside
+// it. pointerWithin checks what's actually under the cursor first (and
+// returns the smallest/innermost match when several nest), falling back to
+// rectIntersection only when the pointer briefly isn't over any registered
+// droppable (e.g. a fast drag between gaps).
+function collisionDetection(args) {
+  const pointerCollisions = pointerWithin(args)
+  if (pointerCollisions.length > 0) return pointerCollisions
+  return rectIntersection(args)
 }
 
 // Wraps a CategorySection with drag-and-drop sorting behaviour
@@ -48,14 +64,29 @@ function SortableCategory(props) {
   )
 }
 
-// Whether two product lists resolve to the same on-screen order, per category —
-// used to detect once Firestore has confirmed an optimistic drag prediction.
-// Compares id sequence rather than raw `order` numbers, since the source
-// category's remaining items aren't renumbered locally the same way they're
-// renumbered on persist.
-function sameProductOrder(a, b, categories) {
-  const ga = groupProducts(a, categories)
-  const gb = groupProducts(b, categories)
+// Whether two product lists resolve to the same on-screen order, per
+// (category, type) bucket — used to detect once Firestore has confirmed an
+// optimistic drag prediction. Compares id sequence rather than raw `order`
+// numbers: order is only ever renumbered within the bucket a product moves
+// into/within, so different buckets can share overlapping numbers by design.
+function bucketKey(p) {
+  return `${p.categoryId || ''}::${p.typeId || ''}`
+}
+
+function sameProductOrder(a, b) {
+  const groupBy = list => {
+    const groups = {}
+    list.forEach(p => {
+      const k = bucketKey(p)
+      ;(groups[k] ??= []).push(p)
+    })
+    Object.values(groups).forEach(arr =>
+      arr.sort((x, y) => (x.order ?? Infinity) - (y.order ?? Infinity))
+    )
+    return groups
+  }
+  const ga = groupBy(a)
+  const gb = groupBy(b)
   const keys = new Set([...Object.keys(ga), ...Object.keys(gb)])
   for (const k of keys) {
     const idsA = (ga[k] || []).map(p => p.id)
@@ -93,8 +124,9 @@ function groupProducts(products, categories) {
 
 export default function App() {
   const { user, linkWithGoogle, handleSignOut } = useAuth()
-  const { products, addProduct, updateProduct, deleteProduct, reorderProductsInCategory, moveProductToCategory } = useProducts(user?.uid)
+  const { products, addProduct, updateProduct, deleteProduct, reorderProductsInCategory, moveProduct } = useProducts(user?.uid)
   const { categories, addCategory, updateCategory, deleteCategory, reorderCategories } = useCategories(user?.uid)
+  const { types, addType, updateType, deleteType } = useTypes(user?.uid)
   const [newProductId, setNewProductId] = useState(null)
   const [activeId, setActiveId] = useState(null)
   const [liveProducts, setLiveProducts] = useState(null)
@@ -107,8 +139,8 @@ export default function App() {
   // the async write round-tripped back through onSnapshot.
   useEffect(() => {
     if (!liveProducts) return
-    if (sameProductOrder(products, liveProducts, categories)) setLiveProducts(null)
-  }, [products, categories])
+    if (sameProductOrder(products, liveProducts)) setLiveProducts(null)
+  }, [products])
 
   // Same idea for category order
   useEffect(() => {
@@ -201,10 +233,20 @@ export default function App() {
   }
 
   async function handleDeleteCategory(catId) {
-    // Clear categoryId on all products that belonged to this category
+    // Clear categoryId/typeId on all products that belonged to this category,
+    // and delete its types (sub-categories) along with it
     const affected = products.filter(p => p.categoryId === catId)
-    await Promise.all(affected.map(p => updateProduct(p.id, { categoryId: null })))
+    await Promise.all(affected.map(p => updateProduct(p.id, { categoryId: null, typeId: null })))
+    const catTypes = types.filter(t => t.categoryId === catId)
+    await Promise.all(catTypes.map(t => deleteType(t.id)))
     await deleteCategory(catId)
+  }
+
+  async function handleDeleteType(typeId) {
+    // Clear typeId on all products that belonged to this type
+    const affected = products.filter(p => p.typeId === typeId)
+    await Promise.all(affected.map(p => updateProduct(p.id, { typeId: null })))
+    await deleteType(typeId)
   }
 
   async function submitNewCategory() {
@@ -234,6 +276,7 @@ export default function App() {
       if (!fromProd) return prev
 
       let toCatId
+      let toTypeId = null
       let insertBeforeId = null
 
       if (oId.startsWith('prod-')) {
@@ -242,24 +285,32 @@ export default function App() {
         const toProd = current.find(p => p.id === toId)
         if (!toProd) return prev
         toCatId = toProd.categoryId || null
+        toTypeId = toProd.typeId || null
         insertBeforeId = toId
+      } else if (oId.startsWith('type-')) {
+        const type = types.find(t => t.id === oId.slice(5))
+        if (!type) return prev
+        toCatId = type.categoryId
+        toTypeId = type.id
       } else if (oId.startsWith('cat-')) {
         toCatId = oId.slice(4)
       } else {
         return prev
       }
 
+      const inBucket = p => (p.categoryId || null) === toCatId && (p.typeId || null) === toTypeId
+
       const without = current.filter(p => p.id !== fromId)
       const targetProds = without
-        .filter(p => (p.categoryId || null) === toCatId)
+        .filter(inBucket)
         .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
 
-      const movedProd = { ...fromProd, categoryId: toCatId }
+      const movedProd = { ...fromProd, categoryId: toCatId, typeId: toTypeId }
       const idx = insertBeforeId ? targetProds.findIndex(p => p.id === insertBeforeId) : -1
       targetProds.splice(idx === -1 ? targetProds.length : idx, 0, movedProd)
 
       const updated = targetProds.map((p, i) => ({ ...p, order: i }))
-      const rest = without.filter(p => (p.categoryId || null) !== toCatId)
+      const rest = without.filter(p => !inBucket(p))
       return [...rest, ...updated]
     })
   }
@@ -296,16 +347,18 @@ export default function App() {
 
       if (origProd && liveProd) {
         const toCatId = liveProd.categoryId || null
+        const toTypeId = liveProd.typeId || null
         const fromCatId = origProd.categoryId || null
+        const fromTypeId = origProd.typeId || null
 
         const targetOrdered = liveProducts
-          .filter(p => (p.categoryId || null) === toCatId)
+          .filter(p => (p.categoryId || null) === toCatId && (p.typeId || null) === toTypeId)
           .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
 
-        if (fromCatId !== toCatId) {
-          moveProductToCategory(fromId, toCatId, targetOrdered)
+        if (fromCatId !== toCatId || fromTypeId !== toTypeId) {
+          moveProduct(fromId, { categoryId: toCatId, typeId: toTypeId }, targetOrdered)
           const sourceOrdered = liveProducts
-            .filter(p => (p.categoryId || null) === fromCatId)
+            .filter(p => (p.categoryId || null) === fromCatId && (p.typeId || null) === fromTypeId)
             .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
           if (sourceOrdered.length > 0) reorderProductsInCategory(sourceOrdered)
         } else {
@@ -454,7 +507,7 @@ export default function App() {
               /* Grouped view with drag-and-drop */
               <DndContext
                 sensors={sensors}
-                collisionDetection={closestCenter}
+                collisionDetection={collisionDetection}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
@@ -467,11 +520,15 @@ export default function App() {
                       category={cat}
                       products={grouped[cat.id] || []}
                       categories={categories}
+                      types={types.filter(t => t.categoryId === cat.id)}
                       allTags={allTags}
                       onUpdateProduct={updateProduct}
                       onDeleteProduct={deleteProduct}
                       onUpdateCategory={updateCategory}
                       onDeleteCategory={handleDeleteCategory}
+                      onAddType={(name, emoji) => addType(name, emoji, cat.id)}
+                      onUpdateType={updateType}
+                      onDeleteType={handleDeleteType}
                       newProductId={newProductId}
                     />
                   ))}
