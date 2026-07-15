@@ -1,4 +1,8 @@
-export const CATEGORY_EMOJIS = ['🧴', '🧼', '💊', '🌿', '💧', '✨', '🌸', '🍃', '🌙', '☀️', '💆', '🛁', '👄', '👁️', '✋', '💄', '🫧', '🪷']
+export const CATEGORY_EMOJIS = [
+  '🧴', '🧼', '💊', '🌿', '💧', '✨', '🌸', '🍃', '🌙', '☀️', '💆', '🛁',
+  '👄', '👁️', '✋', '💄', '🫧', '🪷', '💅', '🪒', '🧖‍♀️', '🪞', '🌺', '🌼',
+  '🍯', '🥥', '🍋', '🥑', '❄️', '💤', '🧘‍♀️', '💦', '🧊', '🕯️', '🌹', '🌈',
+]
 
 export const TAG_COLORS = [
   { key: 'rose',   dot: '#c8727a' },
@@ -9,6 +13,14 @@ export const TAG_COLORS = [
   { key: 'sky',    dot: '#4e8fc0' },
   { key: 'indigo', dot: '#6b6fc9' },
   { key: 'gray',   dot: '#8a8a9a' },
+]
+
+export const TIME_OF_DAY = [
+  { key: 'morning',   label: 'Morning',   icon: '🌅' },
+  { key: 'noon',      label: 'Noon',      icon: '🌞' },
+  { key: 'afternoon', label: 'Afternoon', icon: '🌤️' },
+  { key: 'evening',   label: 'Evening',   icon: '🌆' },
+  { key: 'night',     label: 'Night',     icon: '🌙' },
 ]
 
 export const PRESET_CATEGORIES = [

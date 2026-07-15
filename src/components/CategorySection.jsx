@@ -5,7 +5,7 @@ import ProductCard from './ProductCard'
 import TypeSection from './TypeSection'
 import { CATEGORY_EMOJIS } from '../constants'
 
-function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categories, types, allTags }) {
+function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categories, types, allTags, events, onOpenEvent }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `prod-${product.id}`,
   })
@@ -22,6 +22,8 @@ function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categ
         categories={categories}
         types={types}
         allTags={allTags}
+        events={events}
+        onOpenEvent={onOpenEvent}
         dragHandleProps={{ ...attributes, ...listeners }}
       />
     </li>
@@ -48,11 +50,12 @@ export default function CategorySection({
   categories,         // all categories, for the product card dropdown
   types = [],          // this category's own types (sub-categories)
   allTags = [],        // all tags in use, for the product card tag suggestions
+  events = [],         // all calendar events, for the product card's linked-dates section
+  onOpenEvent,
   onUpdateProduct,
   onDeleteProduct,
   onUpdateCategory,
   onDeleteCategory,
-  onAddType,
   onUpdateType,
   onDeleteType,
   newProductId,
@@ -69,12 +72,6 @@ export default function CategorySection({
   const menuRef = useRef(null)
   const emojiRef = useRef(null)
 
-  const [showNewType, setShowNewType] = useState(false)
-  const [newTypeName, setNewTypeName] = useState('')
-  const [newTypeEmoji, setNewTypeEmoji] = useState('')
-  const [showNewTypeEmoji, setShowNewTypeEmoji] = useState(false)
-  const newTypeEmojiRef = useRef(null)
-
   const isUncategorized = !category
 
   // Close menu/emoji on outside click
@@ -82,7 +79,6 @@ export default function CategorySection({
     function handle(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false)
       if (emojiRef.current && !emojiRef.current.contains(e.target)) setShowEmoji(false)
-      if (newTypeEmojiRef.current && !newTypeEmojiRef.current.contains(e.target)) setShowNewTypeEmoji(false)
     }
     document.addEventListener('mousedown', handle)
     document.addEventListener('touchstart', handle)
@@ -117,18 +113,10 @@ export default function CategorySection({
     }
   }
 
-  function submitNewType() {
-    if (!newTypeName.trim()) return
-    onAddType(newTypeName.trim(), newTypeEmoji)
-    setNewTypeName('')
-    setNewTypeEmoji('')
-    setShowNewType(false)
-    setShowNewTypeEmoji(false)
-  }
-
   const grouped = groupByType(products, types)
   const untyped = grouped.__none || []
   const untypedIds = untyped.map(p => `prod-${p.id}`)
+  const typeIds = types.map(t => `type-${t.id}`)
 
   return (
     <div className={`cat-section${isUncategorized ? ' cat-section--uncategorized' : ''}`}>
@@ -217,46 +205,8 @@ export default function CategorySection({
 
       {!collapsed && (
         <div className="cat-body">
-          {!isUncategorized && (
-            <>
-              {showNewType ? (
-                <div className="new-type-form" ref={newTypeEmojiRef}>
-                  <button className="cat-emoji-btn" onClick={() => setShowNewTypeEmoji(s => !s)}>
-                    {newTypeEmoji || '🏷️'}
-                  </button>
-                  {showNewTypeEmoji && (
-                    <div className="cat-emoji-picker">
-                      {CATEGORY_EMOJIS.map(e => (
-                        <button
-                          key={e}
-                          className={`cat-emoji-opt${e === newTypeEmoji ? ' cat-emoji-opt--active' : ''}`}
-                          onClick={() => { setNewTypeEmoji(e); setShowNewTypeEmoji(false) }}
-                        >
-                          {e}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <input
-                    className="cat-name-input"
-                    value={newTypeName}
-                    onChange={e => setNewTypeName(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') submitNewType(); if (e.key === 'Escape') setShowNewType(false) }}
-                    placeholder="Type name..."
-                    autoFocus
-                  />
-                  <button className="cat-save-btn" onClick={submitNewType}>Add</button>
-                  <button className="cat-cancel-btn" onClick={() => setShowNewType(false)}>✕</button>
-                </div>
-              ) : (
-                <button className="new-type-btn" onClick={() => setShowNewType(true)}>
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                    <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                  </svg>
-                  Add type
-                </button>
-              )}
-
+          {!isUncategorized && types.length > 0 && (
+            <SortableContext items={typeIds} strategy={verticalListSortingStrategy}>
               {types.map(type => (
                 <TypeSection
                   key={type.id}
@@ -265,6 +215,8 @@ export default function CategorySection({
                   categories={categories}
                   types={types}
                   allTags={allTags}
+                  events={events}
+                  onOpenEvent={onOpenEvent}
                   onUpdateProduct={onUpdateProduct}
                   onDeleteProduct={onDeleteProduct}
                   onUpdateType={onUpdateType}
@@ -272,7 +224,7 @@ export default function CategorySection({
                   newProductId={newProductId}
                 />
               ))}
-            </>
+            </SortableContext>
           )}
 
           <SortableContext items={untypedIds} strategy={verticalListSortingStrategy}>
@@ -287,6 +239,8 @@ export default function CategorySection({
                   categories={categories}
                   types={types}
                   allTags={allTags}
+                  events={events}
+                  onOpenEvent={onOpenEvent}
                 />
               ))}
             </ul>

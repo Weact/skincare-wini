@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { addMonths, formatDisplayDate, getProductStatus } from '../utils/dateUtils'
+import { addMonths, formatDisplayDate, formatEventTime, getProductStatus } from '../utils/dateUtils'
 import { resizeImage } from '../utils/imageUtils'
-import { TAG_COLORS } from '../constants'
+import { TAG_COLORS, TIME_OF_DAY } from '../constants'
 import DateInput from './DateInput'
 
 const USAGE_OPTIONS = [
@@ -83,7 +83,7 @@ function TagChipPreview({ tag }) {
   )
 }
 
-export default function ProductCard({ product, onUpdate, onDelete, startExpanded, categories = [], types = [], allTags = [], dragHandleProps }) {
+export default function ProductCard({ product, onUpdate, onDelete, startExpanded, categories = [], types = [], allTags = [], events = [], onOpenEvent, dragHandleProps }) {
   const [expanded, setExpanded] = useState(startExpanded)
   const [name, setName] = useState(product.name || '')
   const [suggestion, setSuggestion] = useState(null)
@@ -101,6 +101,10 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const hexInputRef = useRef(null)
 
   const typesForCategory = types.filter(t => t.categoryId === product.categoryId)
+
+  const linkedEvents = events
+    .filter(e => e.productId === product.id)
+    .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
 
   // Normalise legacy plain-string tags (pre-colour) into { name, color } objects
   const baseTags = (product.tags || []).map(t =>
@@ -344,6 +348,15 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
           </div>
         </div>
         <div className="card-header-right">
+          {linkedEvents.length > 0 && (
+            <span className="card-linked-icon" title="Has a linked calendar event">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="2"/>
+                <path d="M3 9.5h18" stroke="currentColor" strokeWidth="2"/>
+                <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </span>
+          )}
           <span className={`badge badge--${status.type}`}>{status.label}</span>
           <span className={`chevron ${expanded ? 'chevron--up' : ''}`}>
             <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
@@ -531,6 +544,41 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {linkedEvents.length > 0 && (
+            <div className="field">
+              <label className="field-label">Linked dates</label>
+              <ul className="linked-dates-list">
+                {linkedEvents.map(ev => {
+                  const tod = TIME_OF_DAY.find(t => t.key === ev.timeOfDay)
+                  return (
+                    <li key={ev.id}>
+                      <button
+                        type="button"
+                        className="linked-date"
+                        onClick={() => onOpenEvent?.(ev)}
+                      >
+                        <span className="linked-date-emoji">{ev.emoji || '📅'}</span>
+                        <div className="linked-date-info">
+                          <span className="linked-date-name">{ev.name}</span>
+                          <span className="linked-date-meta">
+                            {[
+                              formatDisplayDate(ev.date),
+                              tod ? `${tod.icon} ${tod.label}` : null,
+                              ev.time ? formatEventTime(ev.time) : null,
+                            ].filter(Boolean).join(' · ')}
+                          </span>
+                        </div>
+                        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" className="linked-date-chevron">
+                          <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
           )}
 

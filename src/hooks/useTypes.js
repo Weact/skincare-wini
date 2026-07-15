@@ -48,5 +48,13 @@ export function useTypes(userId) {
     await deleteDoc(doc(db, 'users', userId, 'types', id))
   }
 
-  return { types, addType, updateType, deleteType }
+  async function reorderTypes(orderedTypes) {
+    const batch = writeBatch(db)
+    orderedTypes.forEach((type, index) => {
+      batch.set(doc(db, 'users', userId, 'types', type.id), { order: index }, { merge: true })
+    })
+    await batch.commit()
+  }
+
+  return { types, addType, updateType, deleteType, reorderTypes }
 }

@@ -18,15 +18,19 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import ProductCard from './components/ProductCard'
 import CategorySection from './components/CategorySection'
+import ExpiredSection from './components/ExpiredSection'
 import AuthButton from './components/AuthButton'
 import ChangelogModal from './components/ChangelogModal'
 import SettingsPanel from './components/SettingsPanel'
+import CalendarModal from './components/CalendarModal'
 import Toast from './components/Toast'
 import { useAuth } from './hooks/useAuth'
 import { useProducts } from './hooks/useProducts'
 import { useCategories } from './hooks/useCategories'
 import { useTypes } from './hooks/useTypes'
+import { useEvents } from './hooks/useEvents'
 import { resizeImage } from './utils/imageUtils'
+import { getProductStatus } from './utils/dateUtils'
 import { CATEGORY_EMOJIS, PRESET_CATEGORIES } from './constants'
 import { LATEST_VERSION } from './changelog'
 import './App.css'
@@ -127,11 +131,29 @@ export default function App() {
   const { user, linkWithGoogle, handleSignOut } = useAuth()
   const { products, addProduct, updateProduct, deleteProduct, reorderProductsInCategory, moveProduct } = useProducts(user?.uid)
   const { categories, addCategory, updateCategory, deleteCategory, reorderCategories } = useCategories(user?.uid)
-  const { types, addType, updateType, deleteType } = useTypes(user?.uid)
+  const { types, addType, updateType, deleteType, reorderTypes } = useTypes(user?.uid)
+  const { events, addEvent, updateEvent, deleteEvent } = useEvents(user?.uid)
+  const [showCalendar, setShowCalendar] = useState(false)
+  const [calendarTarget, setCalendarTarget] = useState(null)
+
+  function handleOpenEvent(event) {
+    setCalendarTarget({ date: event.date, eventId: event.id })
+    setShowCalendar(true)
+  }
   const [newProductId, setNewProductId] = useState(null)
+
+  // Consume the "just added" flag once its card has had a chance to mount
+  // expanded — otherwise it lingers forever, and collapsing/reopening the
+  // category or type it lives in (which unmounts and remounts every card
+  // inside) recomputes startExpanded from this same id and pops it open again.
+  useEffect(() => {
+    if (newProductId) setNewProductId(null)
+  }, [newProductId])
+
   const [activeId, setActiveId] = useState(null)
   const [liveProducts, setLiveProducts] = useState(null)
   const [liveCategoryOrder, setLiveCategoryOrder] = useState(null)
+  const [liveTypeOrder, setLiveTypeOrder] = useState(null)
   const [toast, setToast] = useState(null)
   const toastTimerRef = useRef(null)
   const photoInputRef = useRef(null)
@@ -162,12 +184,31 @@ export default function App() {
     if (matches) setLiveCategoryOrder(null)
   }, [categories])
 
+  // Same idea for type order — scoped to whichever category was reordered
+  useEffect(() => {
+    if (!liveTypeOrder) return
+    const confirmed = types.filter(t => t.categoryId === liveTypeOrder.categoryId).map(t => t.id)
+    const matches = confirmed.length === liveTypeOrder.ids.length &&
+      confirmed.every((id, i) => id === liveTypeOrder.ids[i])
+    if (matches) setLiveTypeOrder(null)
+  }, [types])
+
   // New category form state
   const [showNewCat, setShowNewCat] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const [newCatEmoji, setNewCatEmoji] = useState('')
   const [showNewCatEmoji, setShowNewCatEmoji] = useState(false)
   const newCatEmojiRef = useRef(null)
+
+  // New type form state — global, single entry point; the user picks which
+  // category it attaches to, instead of repeating an "Add type" control
+  // inside every expanded category section
+  const [showNewType, setShowNewType] = useState(false)
+  const [newTypeName, setNewTypeName] = useState('')
+  const [newTypeEmoji, setNewTypeEmoji] = useState('')
+  const [showNewTypeEmoji, setShowNewTypeEmoji] = useState(false)
+  const [newTypeCategoryId, setNewTypeCategoryId] = useState('')
+  const newTypeEmojiRef = useRef(null)
 
   const [showChangelog, setShowChangelog] = useState(false)
   const [changelogIsNew, setChangelogIsNew] = useState(
@@ -211,6 +252,9 @@ export default function App() {
     function handle(e) {
       if (newCatEmojiRef.current && !newCatEmojiRef.current.contains(e.target)) {
         setShowNewCatEmoji(false)
+      }
+      if (newTypeEmojiRef.current && !newTypeEmojiRef.current.contains(e.target)) {
+        setShowNewTypeEmoji(false)
       }
     }
     document.addEventListener('mousedown', handle)
@@ -263,6 +307,13 @@ export default function App() {
     await deleteType(typeId)
   }
 
+  async function handleDeleteProduct(productId) {
+    // Unlink (but don't delete) any calendar events pointing at this product
+    const affected = events.filter(e => e.productId === productId)
+    await Promise.all(affected.map(e => updateEvent(e.id, { productId: null })))
+    await deleteProduct(productId)
+  }
+
   async function submitNewCategory() {
     if (!newCatName.trim()) return
     await addCategory(newCatName.trim(), newCatEmoji)
@@ -270,6 +321,20 @@ export default function App() {
     setNewCatEmoji('')
     setShowNewCat(false)
     setShowNewCatEmoji(false)
+  }
+
+  function openNewTypeForm() {
+    setNewTypeCategoryId(categories[0]?.id || '')
+    setShowNewType(true)
+  }
+
+  async function submitNewType() {
+    if (!newTypeName.trim() || !newTypeCategoryId) return
+    await addType(newTypeName.trim(), newTypeEmoji, newTypeCategoryId)
+    setNewTypeName('')
+    setNewTypeEmoji('')
+    setShowNewType(false)
+    setShowNewTypeEmoji(false)
   }
 
   function handleDragStart({ active }) {
@@ -352,6 +417,26 @@ export default function App() {
       return
     }
 
+    // ── Reorder types (within their own category only — no cross-category type drag) ──
+    if (aId.startsWith('type-')) {
+      setLiveProducts(null)
+      if (!over || aId === String(over.id)) return
+      const oId = String(over.id)
+      if (!oId.startsWith('type-')) return
+      const fromType = types.find(t => `type-${t.id}` === aId)
+      const toType = types.find(t => `type-${t.id}` === oId)
+      if (!fromType || !toType || fromType.categoryId !== toType.categoryId) return
+      const categoryTypes = types.filter(t => t.categoryId === fromType.categoryId)
+      const from = categoryTypes.findIndex(t => t.id === fromType.id)
+      const to = categoryTypes.findIndex(t => t.id === toType.id)
+      if (from !== -1 && to !== -1) {
+        const reordered = arrayMove(categoryTypes, from, to)
+        setLiveTypeOrder({ categoryId: fromType.categoryId, ids: reordered.map(t => t.id) })
+        reorderTypes(reordered)
+      }
+      return
+    }
+
     // ── Persist product drag from liveProducts ──
     let persisted = false
     if (aId.startsWith('prod-') && liveProducts && over) {
@@ -392,7 +477,23 @@ export default function App() {
   const displayCategories = liveCategoryOrder
     ? liveCategoryOrder.map(id => categories.find(c => c.id === id)).filter(Boolean)
     : categories
-  const grouped = groupProducts(displayProducts, categories)
+  // `types` already arrives sorted by `order` (see useTypes' orderBy query),
+  // so filtering to one category's types preserves their correct relative
+  // sequence without needing an extra sort here.
+  function typesForCategory(catId) {
+    const base = types.filter(t => t.categoryId === catId)
+    if (liveTypeOrder?.categoryId === catId) {
+      return liveTypeOrder.ids.map(id => base.find(t => t.id === id)).filter(Boolean)
+    }
+    return base
+  }
+  // Expired products are pulled into their own virtual section (like
+  // Uncategorized) regardless of their real categoryId/typeId — status is
+  // computed live from the expiration date, so this stays in sync
+  // automatically and reverses itself if the date is edited back.
+  const expiredProducts = displayProducts.filter(p => getProductStatus(p).type === 'expired')
+  const groupableProducts = displayProducts.filter(p => getProductStatus(p).type !== 'expired')
+  const grouped = groupProducts(groupableProducts, categories)
   const categoryIds = displayCategories.map(c => `cat-${c.id}`)
   const uncategorized = grouped.__none || []
   const allTags = [...new Set(
@@ -417,6 +518,13 @@ export default function App() {
               <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
             </svg>
             {changelogIsNew && <span className="changelog-dot" />}
+          </button>
+          <button className="calendar-btn" onClick={() => setShowCalendar(true)} aria-label="Routine calendar">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="2"/>
+              <path d="M3 9.5h18" stroke="currentColor" strokeWidth="2"/>
+              <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
           </button>
           <button className="settings-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
@@ -492,8 +600,64 @@ export default function App() {
               </div>
             )}
 
+            {/* ── New type form — global; asks which category to attach to ── */}
+            {categories.length > 0 && (
+              showNewType ? (
+                <div className="new-type-global-form" ref={newTypeEmojiRef}>
+                  <select
+                    className="field-input field-select"
+                    value={newTypeCategoryId}
+                    onChange={e => setNewTypeCategoryId(e.target.value)}
+                  >
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.emoji ? `${cat.emoji} ` : ''}{cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="cat-edit-form">
+                    <button className="cat-emoji-btn" onClick={() => setShowNewTypeEmoji(s => !s)}>
+                      {newTypeEmoji || '🏷️'}
+                    </button>
+                    {showNewTypeEmoji && (
+                      <div className="cat-emoji-picker">
+                        {CATEGORY_EMOJIS.map(e => (
+                          <button
+                            key={e}
+                            className={`cat-emoji-opt${e === newTypeEmoji ? ' cat-emoji-opt--active' : ''}`}
+                            onClick={() => { setNewTypeEmoji(e); setShowNewTypeEmoji(false) }}
+                          >
+                            {e}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      className="cat-name-input"
+                      value={newTypeName}
+                      onChange={e => setNewTypeName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') submitNewType(); if (e.key === 'Escape') setShowNewType(false) }}
+                      placeholder="Type name..."
+                      autoFocus
+                    />
+                  </div>
+                  <div className="new-type-global-actions">
+                    <button className="cat-cancel-btn" onClick={() => setShowNewType(false)}>Cancel</button>
+                    <button className="cat-save-btn" onClick={submitNewType}>Add type</button>
+                  </div>
+                </div>
+              ) : (
+                <button className="new-cat-btn" onClick={openNewTypeForm}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                  </svg>
+                  Add type
+                </button>
+              )
+            )}
+
             {/* ── Product list ── */}
-            {products.length === 0 && !showNewCat ? (
+            {products.length === 0 && categories.length === 0 && !showNewCat ? (
               <div className="empty-state">
                 <div className="empty-icon">🧴</div>
                 <p className="empty-title">No products yet</p>
@@ -502,17 +666,19 @@ export default function App() {
             ) : categories.length === 0 ? (
               /* Flat list — no categories created yet */
               <ul className="product-list">
-                {[...displayProducts]
+                {[...groupableProducts]
                   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                   .map(product => (
                     <li key={product.id}>
                       <ProductCard
                         product={product}
                         onUpdate={updates => updateProduct(product.id, updates)}
-                        onDelete={() => deleteProduct(product.id)}
+                        onDelete={() => handleDeleteProduct(product.id)}
                         startExpanded={product.id === newProductId}
                         categories={categories}
                         allTags={allTags}
+                        events={events}
+                        onOpenEvent={handleOpenEvent}
                       />
                     </li>
                   ))}
@@ -525,7 +691,7 @@ export default function App() {
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
-                onDragCancel={() => { setActiveId(null); setLiveProducts(null); setLiveCategoryOrder(null) }}
+                onDragCancel={() => { setActiveId(null); setLiveProducts(null); setLiveCategoryOrder(null); setLiveTypeOrder(null) }}
               >
                 <SortableContext items={categoryIds} strategy={verticalListSortingStrategy}>
                   {displayCategories.map(cat => (
@@ -534,13 +700,14 @@ export default function App() {
                       category={cat}
                       products={grouped[cat.id] || []}
                       categories={categories}
-                      types={types.filter(t => t.categoryId === cat.id)}
+                      types={typesForCategory(cat.id)}
                       allTags={allTags}
+                      events={events}
+                      onOpenEvent={handleOpenEvent}
                       onUpdateProduct={updateProduct}
-                      onDeleteProduct={deleteProduct}
+                      onDeleteProduct={handleDeleteProduct}
                       onUpdateCategory={updateCategory}
                       onDeleteCategory={handleDeleteCategory}
-                      onAddType={(name, emoji) => addType(name, emoji, cat.id)}
                       onUpdateType={updateType}
                       onDeleteType={handleDeleteType}
                       newProductId={newProductId}
@@ -555,8 +722,10 @@ export default function App() {
                     products={uncategorized}
                     categories={categories}
                     allTags={allTags}
+                    events={events}
+                    onOpenEvent={handleOpenEvent}
                     onUpdateProduct={updateProduct}
-                    onDeleteProduct={deleteProduct}
+                    onDeleteProduct={handleDeleteProduct}
                     onUpdateCategory={() => {}}
                     onDeleteCategory={() => {}}
                     newProductId={newProductId}
@@ -587,8 +756,32 @@ export default function App() {
                       </div>
                     ) : null
                   })()}
+                  {activeId?.startsWith('type-') && (() => {
+                    const t = types.find(t => `type-${t.id}` === activeId)
+                    return t ? (
+                      <div className="dnd-overlay cat-overlay-card">
+                        {t.emoji && <span className="cat-emoji">{t.emoji}</span>}
+                        <span className="cat-name">{t.name}</span>
+                      </div>
+                    ) : null
+                  })()}
                 </DragOverlay>
               </DndContext>
+            )}
+
+            {/* ── Expired products — virtual section, cuts across categories, always last ── */}
+            {expiredProducts.length > 0 && (
+              <ExpiredSection
+                products={expiredProducts}
+                categories={categories}
+                types={types}
+                allTags={allTags}
+                events={events}
+                onOpenEvent={handleOpenEvent}
+                onUpdateProduct={updateProduct}
+                onDeleteProduct={handleDeleteProduct}
+                newProductId={newProductId}
+              />
             )}
           </>
         )}
@@ -615,6 +808,17 @@ export default function App() {
       )}
       {showSettings && (
         <SettingsPanel settings={settings} onUpdate={updateSetting} onClose={() => setShowSettings(false)} />
+      )}
+      {showCalendar && (
+        <CalendarModal
+          events={events}
+          products={products}
+          addEvent={addEvent}
+          updateEvent={updateEvent}
+          deleteEvent={deleteEvent}
+          jumpTo={calendarTarget}
+          onClose={() => { setShowCalendar(false); setCalendarTarget(null) }}
+        />
       )}
 
       <Toast message={toast} />

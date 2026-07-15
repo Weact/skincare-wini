@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { useDroppable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import ProductCard from './ProductCard'
 import { CATEGORY_EMOJIS } from '../constants'
 
-function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categories, types, allTags }) {
+function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categories, types, allTags, events, onOpenEvent }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `prod-${product.id}`,
   })
@@ -22,21 +21,26 @@ function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categ
         categories={categories}
         types={types}
         allTags={allTags}
+        events={events}
+        onOpenEvent={onOpenEvent}
         dragHandleProps={{ ...attributes, ...listeners }}
       />
     </li>
   )
 }
 
-// A type is a sub-category, scoped to one category. Unlike categories/products,
-// types aren't drag-reorderable themselves — only their products are — so this
-// uses useDroppable (a plain drop target) rather than useSortable.
+// A type is a sub-category, scoped to one category. It's sortable (drag to
+// reorder within its category) via useSortable — which also registers it as
+// a droppable, so it keeps working as a drop target when a product is
+// dragged directly onto it, without a separate useDroppable registration.
 export default function TypeSection({
   type,
   products,
   categories,
   types,
   allTags,
+  events = [],
+  onOpenEvent,
   onUpdateProduct,
   onDeleteProduct,
   onUpdateType,
@@ -54,7 +58,9 @@ export default function TypeSection({
   const menuRef = useRef(null)
   const emojiRef = useRef(null)
 
-  const { setNodeRef: setDropRef } = useDroppable({ id: `type-${type.id}` })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `type-${type.id}`,
+  })
 
   useEffect(() => {
     function handle(e) {
@@ -97,8 +103,24 @@ export default function TypeSection({
   const productIds = products.map(p => `prod-${p.id}`)
 
   return (
-    <div className="type-section" ref={setDropRef}>
+    <div
+      className="type-section"
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+    >
       <div className="type-header">
+        {!editing && (
+          <span className="type-drag-handle" {...attributes} {...listeners}>
+            <svg width="10" height="14" viewBox="0 0 12 16" fill="none">
+              <circle cx="3.5" cy="3" r="1.5" fill="currentColor"/>
+              <circle cx="8.5" cy="3" r="1.5" fill="currentColor"/>
+              <circle cx="3.5" cy="8" r="1.5" fill="currentColor"/>
+              <circle cx="8.5" cy="8" r="1.5" fill="currentColor"/>
+              <circle cx="3.5" cy="13" r="1.5" fill="currentColor"/>
+              <circle cx="8.5" cy="13" r="1.5" fill="currentColor"/>
+            </svg>
+          </span>
+        )}
         {editing ? (
           <div className="cat-edit-form" ref={emojiRef}>
             <button className="cat-emoji-btn" onClick={() => setShowEmoji(s => !s)}>
@@ -172,6 +194,8 @@ export default function TypeSection({
                 categories={categories}
                 types={types}
                 allTags={allTags}
+                events={events}
+                onOpenEvent={onOpenEvent}
               />
             ))}
           </ul>
