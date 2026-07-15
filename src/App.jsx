@@ -48,6 +48,26 @@ function SortableCategory(props) {
   )
 }
 
+// Whether two product lists resolve to the same on-screen order, per category —
+// used to detect once Firestore has confirmed an optimistic drag prediction.
+// Compares id sequence rather than raw `order` numbers, since the source
+// category's remaining items aren't renumbered locally the same way they're
+// renumbered on persist.
+function sameProductOrder(a, b, categories) {
+  const ga = groupProducts(a, categories)
+  const gb = groupProducts(b, categories)
+  const keys = new Set([...Object.keys(ga), ...Object.keys(gb)])
+  for (const k of keys) {
+    const idsA = (ga[k] || []).map(p => p.id)
+    const idsB = (gb[k] || []).map(p => p.id)
+    if (idsA.length !== idsB.length) return false
+    for (let i = 0; i < idsA.length; i++) {
+      if (idsA[i] !== idsB[i]) return false
+    }
+  }
+  return true
+}
+
 // Groups and sorts products by category
 function groupProducts(products, categories) {
   const groups = {}
@@ -78,7 +98,26 @@ export default function App() {
   const [newProductId, setNewProductId] = useState(null)
   const [activeId, setActiveId] = useState(null)
   const [liveProducts, setLiveProducts] = useState(null)
+  const [liveCategoryOrder, setLiveCategoryOrder] = useState(null)
   const photoInputRef = useRef(null)
+
+  // Drop the optimistic product-order preview once Firestore has confirmed
+  // the same order — clearing it right on drop (the old behaviour) made the
+  // dropped card snap back to its pre-drag slot for a beat, then jump once
+  // the async write round-tripped back through onSnapshot.
+  useEffect(() => {
+    if (!liveProducts) return
+    if (sameProductOrder(products, liveProducts, categories)) setLiveProducts(null)
+  }, [products, categories])
+
+  // Same idea for category order
+  useEffect(() => {
+    if (!liveCategoryOrder) return
+    const confirmed = categories.map(c => c.id)
+    const matches = confirmed.length === liveCategoryOrder.length &&
+      confirmed.every((id, i) => id === liveCategoryOrder[i])
+    if (matches) setLiveCategoryOrder(null)
+  }, [categories])
 
   // New category form state
   const [showNewCat, setShowNewCat] = useState(false)
@@ -237,11 +276,19 @@ export default function App() {
       if (!oId.startsWith('cat-')) return
       const from = categories.findIndex(c => `cat-${c.id}` === aId)
       const to = categories.findIndex(c => `cat-${c.id}` === oId)
-      if (from !== -1 && to !== -1) reorderCategories(arrayMove([...categories], from, to))
+      if (from !== -1 && to !== -1) {
+        const reordered = arrayMove([...categories], from, to)
+        // Predict the confirmed order immediately so the dropped category
+        // doesn't snap back to its old slot while Firestore round-trips —
+        // cleared once the effect above sees `categories` match this.
+        setLiveCategoryOrder(reordered.map(c => c.id))
+        reorderCategories(reordered)
+      }
       return
     }
 
     // ── Persist product drag from liveProducts ──
+    let persisted = false
     if (aId.startsWith('prod-') && liveProducts && over) {
       const fromId = aId.slice(5)
       const origProd = products.find(p => p.id === fromId)
@@ -264,15 +311,22 @@ export default function App() {
         } else {
           reorderProductsInCategory(targetOrdered)
         }
+        persisted = true
       }
     }
 
-    setLiveProducts(null)
+    // Only snap back to the raw (unconfirmed) `products` here if nothing was
+    // actually persisted — otherwise keep showing the prediction in
+    // `liveProducts` until the effect above confirms Firestore caught up.
+    if (!persisted) setLiveProducts(null)
   }
 
   const displayProducts = liveProducts ?? products
+  const displayCategories = liveCategoryOrder
+    ? liveCategoryOrder.map(id => categories.find(c => c.id === id)).filter(Boolean)
+    : categories
   const grouped = groupProducts(displayProducts, categories)
-  const categoryIds = categories.map(c => `cat-${c.id}`)
+  const categoryIds = displayCategories.map(c => `cat-${c.id}`)
   const uncategorized = grouped.__none || []
   const allTags = [...new Set(
     products.flatMap(p => (p.tags || []).map(t => typeof t === 'string' ? t : t.name))
@@ -404,10 +458,10 @@ export default function App() {
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
-                onDragCancel={() => { setActiveId(null); setLiveProducts(null) }}
+                onDragCancel={() => { setActiveId(null); setLiveProducts(null); setLiveCategoryOrder(null) }}
               >
                 <SortableContext items={categoryIds} strategy={verticalListSortingStrategy}>
-                  {categories.map(cat => (
+                  {displayCategories.map(cat => (
                     <SortableCategory
                       key={cat.id}
                       category={cat}
