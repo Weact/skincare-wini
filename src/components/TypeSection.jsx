@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import ProductCard from './ProductCard'
 import { CATEGORY_EMOJIS } from '../constants'
 
-function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categories, types, allTags, events, onOpenEvent }) {
+function SortableProductItem({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories, types, onCreateType, events, onOpenEvent }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `prod-${product.id}`,
   })
@@ -18,9 +18,11 @@ function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categ
         onUpdate={onUpdate}
         onDelete={onDelete}
         startExpanded={startExpanded}
+        expanded={expanded}
+        onToggleExpanded={onToggleExpanded}
         categories={categories}
         types={types}
-        allTags={allTags}
+        onCreateType={onCreateType}
         events={events}
         onOpenEvent={onOpenEvent}
         dragHandleProps={{ ...attributes, ...listeners }}
@@ -38,7 +40,7 @@ export default function TypeSection({
   products,
   categories,
   types,
-  allTags,
+  onCreateType,
   events = [],
   onOpenEvent,
   onUpdateProduct,
@@ -46,6 +48,8 @@ export default function TypeSection({
   onUpdateType,
   onDeleteType,
   newProductId,
+  expandedIds,
+  onToggleExpanded,
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -191,9 +195,11 @@ export default function TypeSection({
                 onUpdate={updates => onUpdateProduct(product.id, updates)}
                 onDelete={() => onDeleteProduct(product.id)}
                 startExpanded={product.id === newProductId}
+                expanded={expandedIds.has(product.id)}
+                onToggleExpanded={() => onToggleExpanded(product.id)}
                 categories={categories}
                 types={types}
-                allTags={allTags}
+                onCreateType={onCreateType}
                 events={events}
                 onOpenEvent={onOpenEvent}
               />

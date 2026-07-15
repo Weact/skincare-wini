@@ -9,12 +9,14 @@ export default function ExpiredSection({
   products,
   categories,
   types,
-  allTags,
+  onCreateType,
   events,
   onOpenEvent,
   onUpdateProduct,
   onDeleteProduct,
   newProductId,
+  expandedIds,
+  onToggleExpanded,
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -42,9 +44,11 @@ export default function ExpiredSection({
                 onUpdate={updates => onUpdateProduct(product.id, updates)}
                 onDelete={() => onDeleteProduct(product.id)}
                 startExpanded={product.id === newProductId}
+                expanded={expandedIds.has(product.id)}
+                onToggleExpanded={() => onToggleExpanded(product.id)}
                 categories={categories}
                 types={types}
-                allTags={allTags}
+                onCreateType={onCreateType}
                 events={events}
                 onOpenEvent={onOpenEvent}
               />

@@ -38,6 +38,7 @@ export function useTypes(userId) {
     await setDoc(doc(db, 'users', userId, 'types', id), {
       id, name, emoji: emoji || '', categoryId, order, createdAt: new Date().toISOString(),
     })
+    return id
   }
 
   async function updateType(id, updates) {

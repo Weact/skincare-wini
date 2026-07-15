@@ -14,10 +14,8 @@ export const CHANGELOG = [
       'Toast confirmation when adding a new product',
       'Add types within a category — sub-categories to organize products further',
       'Drag products into a type, or assign one from the product card',
-      'Add custom tags to any product — e.g. Travel size, Gift, Holy grail',
-      'Pick a colour for each tag, from 8 presets or any custom colour',
-      'Drag tags to reorder them',
-      'Tag suggestions reuse names you\'ve already used on other products',
+      'Type picker on the product card lets you select an existing type or create a new one on the fly, with its own emoji',
+      'Cards no longer collapse when their category or type changes',
     ],
   },
   {

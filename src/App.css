@@ -41,15 +41,6 @@
   --sealed-bg: #edf1f5;
   --sealed-text: #5a6e80;
 
-  --tag-rose-bg: #faeef0;   --tag-rose-text: #a3505a;
-  --tag-peach-bg: #fbeee3;  --tag-peach-text: #a35a2e;
-  --tag-gold-bg: #fbf3df;   --tag-gold-text: #93711f;
-  --tag-sage-bg: #eaf4ec;   --tag-sage-text: #3d7a49;
-  --tag-teal-bg: #e5f5f3;   --tag-teal-text: #227b70;
-  --tag-sky-bg: #e8f2fa;    --tag-sky-text: #2f6690;
-  --tag-indigo-bg: #eeeefb; --tag-indigo-text: #4c4fa8;
-  --tag-gray-bg: #eeeef2;   --tag-gray-text: #5c5c6e;
-
   --text: #1c1c2e;
   --text-muted: #7a7a8e;
   --text-light: #a8a8bb;
@@ -85,15 +76,6 @@
   --sealed: #7888a0;
   --sealed-bg: #141c2a;
   --sealed-text: #7888a0;
-
-  --tag-rose-bg: #33161b;   --tag-rose-text: #e0929a;
-  --tag-peach-bg: #331f10;  --tag-peach-text: #e0a06a;
-  --tag-gold-bg: #2c2308;   --tag-gold-text: #e0bc6a;
-  --tag-sage-bg: #0c2214;   --tag-sage-text: #6ec07e;
-  --tag-teal-bg: #0c2320;   --tag-teal-text: #5fc9bd;
-  --tag-sky-bg: #0e1f2c;    --tag-sky-text: #7cb3dd;
-  --tag-indigo-bg: #1c1c38; --tag-indigo-text: #a3a6ea;
-  --tag-gray-bg: #202028;   --tag-gray-text: #b0b0c0;
 
   --text: #ede8f8;
   --text-muted: #8880a8;
@@ -456,197 +438,6 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Tag chips shown on the collapsed card */
-.card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 3px;
-}
-
-.tag-chip {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--primary);
-  background: var(--primary-light);
-  border-radius: 20px;
-  padding: 3px 9px;
-  white-space: nowrap;
-}
-
-.tag-chip--rose   { color: var(--tag-rose-text);   background: var(--tag-rose-bg); }
-.tag-chip--peach  { color: var(--tag-peach-text);  background: var(--tag-peach-bg); }
-.tag-chip--gold   { color: var(--tag-gold-text);   background: var(--tag-gold-bg); }
-.tag-chip--sage   { color: var(--tag-sage-text);   background: var(--tag-sage-bg); }
-.tag-chip--teal   { color: var(--tag-teal-text);   background: var(--tag-teal-bg); }
-.tag-chip--sky    { color: var(--tag-sky-text);    background: var(--tag-sky-bg); }
-.tag-chip--indigo { color: var(--tag-indigo-text); background: var(--tag-indigo-bg); }
-.tag-chip--gray   { color: var(--tag-gray-text);   background: var(--tag-gray-bg); }
-
-.tag-chip--removable {
-  padding-right: 6px;
-  cursor: grab;
-  touch-action: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.tag-chip--removable:active {
-  cursor: grabbing;
-}
-
-/* Dimmed placeholder left behind at the chip's original spot while dragging —
-   the actual "lifted" chip is rendered separately via DragOverlay/TagChipPreview */
-.tag-chip--dragging {
-  opacity: 0.35;
-}
-
-/* Floating preview that follows the pointer while a tag is being dragged */
-.tag-chip--overlay {
-  cursor: grabbing;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06);
-  pointer-events: none;
-}
-
-/* Colour dot button inside an editable tag chip — opens the colour picker sheet */
-.tag-color-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  padding: 0;
-  border: none;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-/* Colour swatch grid inside the tag colour picker bottom sheet */
-.tag-color-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 14px;
-  justify-items: center;
-}
-
-.tag-color-swatch {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 2.5px solid transparent;
-  padding: 0;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.tag-color-swatch:hover {
-  transform: scale(1.08);
-}
-
-.tag-color-swatch--active {
-  border-color: var(--text);
-}
-
-.tag-color-swatch--custom {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-  border-style: dashed;
-  border-color: var(--border-input);
-  color: var(--text-muted);
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.tag-color-swatch--custom.tag-color-swatch--active {
-  border-style: solid;
-}
-
-.modal-sheet--tag-color {
-  max-width: 340px;
-}
-
-/* Custom colour hex entry — input[type=color] has no picker UI on iOS at all */
-.tag-hex-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.tag-hex-preview {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border);
-  flex-shrink: 0;
-}
-
-.tag-hex-input-wrap {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  background: var(--bg);
-  border: 1.5px solid var(--border-input);
-  border-radius: var(--radius-sm);
-  padding: 0 12px;
-  transition: border-color 0.15s;
-}
-
-.tag-hex-input-wrap:focus-within {
-  border-color: var(--primary);
-  background: var(--surface);
-}
-
-.tag-hex-prefix {
-  color: var(--text-light);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.tag-hex-input {
-  flex: 1;
-  min-width: 0;
-  /* 16px prevents iOS Safari from zooming in on focus */
-  font-size: 16px;
-  font-family: ui-monospace, Menlo, monospace;
-  color: var(--text);
-  background: none;
-  border: none;
-  outline: none;
-  padding: 11px 6px;
-  text-transform: lowercase;
-}
-
-.tag-hex-input::placeholder {
-  color: var(--text-light);
-  text-transform: none;
-}
-
-.tag-remove {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: inherit;
-  font-size: 9px;
-  cursor: pointer;
-  opacity: 0.65;
-}
-
-.tag-remove:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.08);
-}
-
 /* Status badge */
 .badge {
   font-size: var(--fz-sm);
@@ -730,48 +521,54 @@ body {
   background: var(--surface);
 }
 
-/* Tags field (edit form) */
-.tags-input-wrap {
+/* Type field (product card) — current type chip, or a create/select input + suggestions */
+.type-current {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  background: var(--bg);
-  border: 1.5px solid var(--border-input);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  transition: border-color 0.15s;
+  gap: 8px;
 }
 
-.tags-input-wrap:focus-within {
-  border-color: var(--primary);
-  background: var(--surface);
+.type-current-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  border-radius: 20px;
+  padding: 7px 12px;
 }
 
-.tag-input {
-  flex: 1;
-  min-width: 90px;
-  font-size: 16px;
-  font-family: inherit;
-  color: var(--text);
-  background: none;
+.type-current-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
   border: none;
-  outline: none;
-  padding: 3px 2px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, color 0.12s;
 }
 
-.tag-input::placeholder {
-  color: var(--text-light);
+.type-current-remove:hover {
+  background: var(--red-bg);
+  color: var(--red);
 }
 
-.tag-suggestions {
+.type-suggestions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
 }
 
-.tag-suggestion-chip {
+.type-suggestion-chip {
   font-size: 12px;
   font-family: inherit;
   font-weight: 500;
@@ -785,13 +582,13 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-.tag-suggestion-chip:hover {
+.type-suggestion-chip:hover {
   border-color: var(--primary);
   color: var(--primary);
   background: var(--primary-light);
 }
 
-.tag-suggestion-chip:active {
+.type-suggestion-chip:active {
   opacity: 0.7;
 }
 

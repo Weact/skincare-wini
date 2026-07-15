@@ -150,6 +150,24 @@ export default function App() {
     if (newProductId) setNewProductId(null)
   }, [newProductId])
 
+  // Which product cards are expanded — lifted up here (rather than local
+  // state inside ProductCard) because changing a product's category/type
+  // moves it to a different parent list (a different CategorySection or
+  // TypeSection), which unmounts the old card instance and mounts a new one
+  // elsewhere. Local state would reset to collapsed on that remount; state
+  // stored here survives it, since the new instance just reads its id back
+  // out of this set.
+  const [expandedIds, setExpandedIds] = useState(() => new Set())
+
+  function toggleExpanded(id) {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   const [activeId, setActiveId] = useState(null)
   const [liveProducts, setLiveProducts] = useState(null)
   const [liveCategoryOrder, setLiveCategoryOrder] = useState(null)
@@ -277,6 +295,7 @@ export default function App() {
       usageMonths: null, photo, createdAt: new Date().toISOString(),
     })
     setNewProductId(id)
+    setExpandedIds(prev => new Set(prev).add(id))
     // New products always start uncategorized — there's no way yet to add
     // directly into a specific category from the FABs
     showToast('Added product to Uncategorized')
@@ -335,6 +354,11 @@ export default function App() {
     setNewTypeEmoji('')
     setShowNewType(false)
     setShowNewTypeEmoji(false)
+  }
+
+  // Inline type creation from a product card (no emoji picker there — keep it quick)
+  function handleCreateType(name, emoji, categoryId) {
+    return addType(name, emoji, categoryId)
   }
 
   function handleDragStart({ active }) {
@@ -496,9 +520,6 @@ export default function App() {
   const grouped = groupProducts(groupableProducts, categories)
   const categoryIds = displayCategories.map(c => `cat-${c.id}`)
   const uncategorized = grouped.__none || []
-  const allTags = [...new Set(
-    products.flatMap(p => (p.tags || []).map(t => typeof t === 'string' ? t : t.name))
-  )].sort((a, b) => a.localeCompare(b))
   const unusedPresets = PRESET_CATEGORIES.filter(
     p => !categories.some(c => c.name.toLowerCase() === p.name.toLowerCase())
   )
@@ -675,8 +696,10 @@ export default function App() {
                         onUpdate={updates => updateProduct(product.id, updates)}
                         onDelete={() => handleDeleteProduct(product.id)}
                         startExpanded={product.id === newProductId}
+                        expanded={expandedIds.has(product.id)}
+                        onToggleExpanded={() => toggleExpanded(product.id)}
                         categories={categories}
-                        allTags={allTags}
+                        onCreateType={handleCreateType}
                         events={events}
                         onOpenEvent={handleOpenEvent}
                       />
@@ -701,7 +724,7 @@ export default function App() {
                       products={grouped[cat.id] || []}
                       categories={categories}
                       types={typesForCategory(cat.id)}
-                      allTags={allTags}
+                      onCreateType={handleCreateType}
                       events={events}
                       onOpenEvent={handleOpenEvent}
                       onUpdateProduct={updateProduct}
@@ -711,6 +734,8 @@ export default function App() {
                       onUpdateType={updateType}
                       onDeleteType={handleDeleteType}
                       newProductId={newProductId}
+                      expandedIds={expandedIds}
+                      onToggleExpanded={toggleExpanded}
                     />
                   ))}
                 </SortableContext>
@@ -721,7 +746,7 @@ export default function App() {
                     category={null}
                     products={uncategorized}
                     categories={categories}
-                    allTags={allTags}
+                    onCreateType={handleCreateType}
                     events={events}
                     onOpenEvent={handleOpenEvent}
                     onUpdateProduct={updateProduct}
@@ -729,6 +754,8 @@ export default function App() {
                     onUpdateCategory={() => {}}
                     onDeleteCategory={() => {}}
                     newProductId={newProductId}
+                    expandedIds={expandedIds}
+                    onToggleExpanded={toggleExpanded}
                   />
                 )}
 
@@ -742,6 +769,8 @@ export default function App() {
                           onUpdate={() => {}}
                           onDelete={() => {}}
                           startExpanded={false}
+                          expanded={false}
+                          onToggleExpanded={() => {}}
                           categories={categories}
                         />
                       </div>
@@ -775,12 +804,14 @@ export default function App() {
                 products={expiredProducts}
                 categories={categories}
                 types={types}
-                allTags={allTags}
+                onCreateType={handleCreateType}
                 events={events}
                 onOpenEvent={handleOpenEvent}
                 onUpdateProduct={updateProduct}
                 onDeleteProduct={handleDeleteProduct}
                 newProductId={newProductId}
+                expandedIds={expandedIds}
+                onToggleExpanded={toggleExpanded}
               />
             )}
           </>

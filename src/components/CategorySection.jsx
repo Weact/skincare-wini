@@ -5,7 +5,7 @@ import ProductCard from './ProductCard'
 import TypeSection from './TypeSection'
 import { CATEGORY_EMOJIS } from '../constants'
 
-function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categories, types, allTags, events, onOpenEvent }) {
+function SortableProductItem({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories, types, onCreateType, events, onOpenEvent }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `prod-${product.id}`,
   })
@@ -19,9 +19,11 @@ function SortableProductItem({ product, onUpdate, onDelete, startExpanded, categ
         onUpdate={onUpdate}
         onDelete={onDelete}
         startExpanded={startExpanded}
+        expanded={expanded}
+        onToggleExpanded={onToggleExpanded}
         categories={categories}
         types={types}
-        allTags={allTags}
+        onCreateType={onCreateType}
         events={events}
         onOpenEvent={onOpenEvent}
         dragHandleProps={{ ...attributes, ...listeners }}
@@ -49,7 +51,7 @@ export default function CategorySection({
   products,
   categories,         // all categories, for the product card dropdown
   types = [],          // this category's own types (sub-categories)
-  allTags = [],        // all tags in use, for the product card tag suggestions
+  onCreateType,        // (name, categoryId) => Promise<newTypeId>, for the product card's inline type creation
   events = [],         // all calendar events, for the product card's linked-dates section
   onOpenEvent,
   onUpdateProduct,
@@ -59,6 +61,8 @@ export default function CategorySection({
   onUpdateType,
   onDeleteType,
   newProductId,
+  expandedIds,
+  onToggleExpanded,
   dragHandleProps,    // provided by parent SortableCategory wrapper
 }) {
   const [collapsed, setCollapsed] = useState(false)
@@ -214,7 +218,7 @@ export default function CategorySection({
                   products={grouped[type.id] || []}
                   categories={categories}
                   types={types}
-                  allTags={allTags}
+                  onCreateType={onCreateType}
                   events={events}
                   onOpenEvent={onOpenEvent}
                   onUpdateProduct={onUpdateProduct}
@@ -222,6 +226,8 @@ export default function CategorySection({
                   onUpdateType={onUpdateType}
                   onDeleteType={onDeleteType}
                   newProductId={newProductId}
+                  expandedIds={expandedIds}
+                  onToggleExpanded={onToggleExpanded}
                 />
               ))}
             </SortableContext>
@@ -236,9 +242,11 @@ export default function CategorySection({
                   onUpdate={updates => onUpdateProduct(product.id, updates)}
                   onDelete={() => onDeleteProduct(product.id)}
                   startExpanded={product.id === newProductId}
+                  expanded={expandedIds.has(product.id)}
+                  onToggleExpanded={() => onToggleExpanded(product.id)}
                   categories={categories}
                   types={types}
-                  allTags={allTags}
+                  onCreateType={onCreateType}
                   events={events}
                   onOpenEvent={onOpenEvent}
                 />
