@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import ProductCard from './ProductCard'
-import { CATEGORY_EMOJIS } from '../constants'
+import EmojiPicker from './EmojiPicker'
 
 function SortableProductItem({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories, types, onCreateType, events, onOpenEvent }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -131,17 +131,10 @@ export default function TypeSection({
               {editEmoji || '🏷️'}
             </button>
             {showEmoji && (
-              <div className="cat-emoji-picker">
-                {CATEGORY_EMOJIS.map(e => (
-                  <button
-                    key={e}
-                    className={`cat-emoji-opt${e === editEmoji ? ' cat-emoji-opt--active' : ''}`}
-                    onClick={() => { setEditEmoji(e); setShowEmoji(false) }}
-                  >
-                    {e}
-                  </button>
-                ))}
-              </div>
+              <EmojiPicker
+                value={editEmoji}
+                onSelect={e => { setEditEmoji(e); setShowEmoji(false) }}
+              />
             )}
             <input
               className="cat-name-input"

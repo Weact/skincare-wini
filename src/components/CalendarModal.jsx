@@ -1,8 +1,28 @@
 import { useState, useRef, useEffect } from 'react'
-import { CATEGORY_EMOJIS, TIME_OF_DAY } from '../constants'
-import { todayISO, getMonthGrid, formatMonthYear, formatDayHeading, formatEventTime } from '../utils/dateUtils'
+import { TIME_OF_DAY } from '../constants'
+import { todayISO, getMonthGrid, formatMonthYear, formatDayHeading, formatEventTime, getProductStatus } from '../utils/dateUtils'
+import EmojiPicker from './EmojiPicker'
 
-export default function CalendarModal({ events, products = [], addEvent, updateEvent, deleteEvent, jumpTo, onClose }) {
+const SORT_OPTIONS = [
+  { key: 'time', label: 'Time' },
+  { key: 'name', label: 'Name' },
+  { key: 'duration', label: 'Duration' },
+]
+
+// Each mode falls back to time as a stable tiebreaker (except time itself,
+// which falls back to name) so equal-ranked events don't jump around
+// unpredictably between renders.
+function compareEvents(a, b, sortBy) {
+  const byTime = (a.time || '99:99').localeCompare(b.time || '99:99')
+  const byName = (a.name || '').localeCompare(b.name || '')
+  const byDuration = (a.duration ?? Infinity) - (b.duration ?? Infinity)
+
+  if (sortBy === 'name') return byName || byTime
+  if (sortBy === 'duration') return byDuration || byTime
+  return byTime || byName
+}
+
+export default function CalendarModal({ events, products = [], categories = [], types = [], addEvent, updateEvent, deleteEvent, jumpTo, onClose }) {
   const today = todayISO()
   const now = new Date()
   const jumpDate = jumpTo?.date ? new Date(jumpTo.date + 'T00:00:00') : null
@@ -19,6 +39,11 @@ export default function CalendarModal({ events, products = [], addEvent, updateE
   const [timeOfDay, setTimeOfDay] = useState('')
   const [time, setTime] = useState('')
   const [productId, setProductId] = useState('')
+  const [filterCategoryId, setFilterCategoryId] = useState('')
+  const [filterTypeId, setFilterTypeId] = useState('')
+  const [hideExpired, setHideExpired] = useState(false)
+  const [sortBy, setSortBy] = useState('time')
+  const [sortDir, setSortDir] = useState('asc')
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const confirmTimerRef = useRef(null)
   const emojiRef = useRef(null)
@@ -26,6 +51,19 @@ export default function CalendarModal({ events, products = [], addEvent, updateE
   const sortedProducts = [...products].sort((a, b) =>
     (a.name || '').localeCompare(b.name || '')
   )
+
+  const filterTypes = types.filter(t => t.categoryId === filterCategoryId)
+
+  // Always keep the currently-selected product visible even if it wouldn't
+  // otherwise pass the filters, so picking a filter never silently clears
+  // an existing selection out from under the user.
+  const filteredProducts = sortedProducts.filter(p => {
+    if (p.id === productId) return true
+    if (filterCategoryId && (p.categoryId || '') !== filterCategoryId) return false
+    if (filterTypeId && (p.typeId || '') !== filterTypeId) return false
+    if (hideExpired && getProductStatus(p).type === 'expired') return false
+    return true
+  })
 
   useEffect(() => {
     function handle(e) {
@@ -57,7 +95,10 @@ export default function CalendarModal({ events, products = [], addEvent, updateE
     ;(eventsByDate[e.date] ??= []).push(e)
   })
   Object.values(eventsByDate).forEach(list =>
-    list.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'))
+    list.sort((a, b) => {
+      const result = compareEvents(a, b, sortBy)
+      return sortDir === 'desc' ? -result : result
+    })
   )
 
   const grid = getMonthGrid(viewYear, viewMonth)
@@ -195,8 +236,34 @@ export default function CalendarModal({ events, products = [], addEvent, updateE
           </div>
 
           <div className="cal-day-section">
-            <div className="cal-day-heading">
-              {selectedDate === today ? 'Today' : formatDayHeading(selectedDate)}
+            <div className="cal-day-heading-row">
+              <div className="cal-day-heading">
+                {selectedDate === today ? 'Today' : formatDayHeading(selectedDate)}
+              </div>
+              {dayEvents.length > 1 && (
+                <div className="cal-sort-row">
+                  <span className="cal-sort-label">Sort</span>
+                  {SORT_OPTIONS.map(opt => {
+                    const active = sortBy === opt.key
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        className={`cal-sort-btn${active ? ' cal-sort-btn--active' : ''}`}
+                        onClick={() => {
+                          if (active) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+                          else { setSortBy(opt.key); setSortDir('asc') }
+                        }}
+                      >
+                        {opt.label}
+                        {active && (
+                          <span className="cal-sort-arrow">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             {dayEvents.length === 0 && !showForm && (
@@ -247,18 +314,10 @@ export default function CalendarModal({ events, products = [], addEvent, updateE
                     {emoji || '🧴'}
                   </button>
                   {showEmojiPicker && (
-                    <div className="cat-emoji-picker">
-                      {CATEGORY_EMOJIS.map(e => (
-                        <button
-                          key={e}
-                          type="button"
-                          className={`cat-emoji-opt${e === emoji ? ' cat-emoji-opt--active' : ''}`}
-                          onClick={() => { setEmoji(e); setShowEmojiPicker(false) }}
-                        >
-                          {e}
-                        </button>
-                      ))}
-                    </div>
+                    <EmojiPicker
+                      value={emoji}
+                      onSelect={e => { setEmoji(e); setShowEmojiPicker(false) }}
+                    />
                   )}
                   <input
                     type="text"
@@ -290,13 +349,54 @@ export default function CalendarModal({ events, products = [], addEvent, updateE
                 {sortedProducts.length > 0 && (
                   <div className="field">
                     <label className="field-label">Product</label>
+
+                    {categories.length > 0 && (
+                      <div className="cal-product-filters">
+                        <select
+                          className="field-input field-select"
+                          value={filterCategoryId}
+                          onChange={e => { setFilterCategoryId(e.target.value); setFilterTypeId('') }}
+                        >
+                          <option value="">All categories</option>
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.emoji ? `${cat.emoji} ` : ''}{cat.name}
+                            </option>
+                          ))}
+                        </select>
+                        {filterCategoryId && filterTypes.length > 0 && (
+                          <select
+                            className="field-input field-select"
+                            value={filterTypeId}
+                            onChange={e => setFilterTypeId(e.target.value)}
+                          >
+                            <option value="">All types</option>
+                            {filterTypes.map(t => (
+                              <option key={t.id} value={t.id}>
+                                {t.emoji ? `${t.emoji} ` : ''}{t.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    )}
+
+                    <label className="cal-hide-expired">
+                      <input
+                        type="checkbox"
+                        checked={hideExpired}
+                        onChange={e => setHideExpired(e.target.checked)}
+                      />
+                      Hide expired products
+                    </label>
+
                     <select
                       className="field-input field-select"
                       value={productId}
                       onChange={e => setProductId(e.target.value)}
                     >
                       <option value="">No product</option>
-                      {sortedProducts.map(p => (
+                      {filteredProducts.map(p => (
                         <option key={p.id} value={p.id}>{p.name || 'Unnamed product'}</option>
                       ))}
                     </select>

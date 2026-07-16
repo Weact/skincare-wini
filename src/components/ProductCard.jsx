@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { addMonths, formatDisplayDate, formatEventTime, getProductStatus } from '../utils/dateUtils'
 import { resizeImage } from '../utils/imageUtils'
-import { CATEGORY_EMOJIS, TIME_OF_DAY } from '../constants'
+import { TIME_OF_DAY } from '../constants'
 import DateInput from './DateInput'
+import EmojiPicker from './EmojiPicker'
 
 const USAGE_OPTIONS = [
+  { value: 1, label: '1 month' },
+  { value: 2, label: '2 months' },
   { value: 3, label: '3 months' },
   { value: 6, label: '6 months' },
   { value: 12, label: '12 months' },
@@ -298,18 +301,10 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
                     {typeEmoji || '🏷️'}
                   </button>
                   {showTypeEmojiPicker && (
-                    <div className="cat-emoji-picker">
-                      {CATEGORY_EMOJIS.map(e => (
-                        <button
-                          key={e}
-                          type="button"
-                          className={`cat-emoji-opt${e === typeEmoji ? ' cat-emoji-opt--active' : ''}`}
-                          onClick={() => { setTypeEmoji(e); setShowTypeEmojiPicker(false) }}
-                        >
-                          {e}
-                        </button>
-                      ))}
-                    </div>
+                    <EmojiPicker
+                      value={typeEmoji}
+                      onSelect={e => { setTypeEmoji(e); setShowTypeEmojiPicker(false) }}
+                    />
                   )}
                   <input
                     type="text"

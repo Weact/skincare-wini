@@ -1008,6 +1008,40 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   background: var(--primary-light);
 }
 
+.cat-emoji-opt--custom {
+  border-style: dashed;
+  border-color: var(--border-input);
+  color: var(--text-muted);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cat-emoji-opt--custom.cat-emoji-opt--active {
+  border-style: solid;
+  font-size: 20px;
+}
+
+.cat-emoji-custom-row {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+.cat-emoji-custom-input {
+  width: 100%;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1.5px solid var(--border-input);
+  border-radius: var(--radius-xs);
+  padding: 8px 10px;
+  outline: none;
+}
+
+.cat-emoji-custom-input:focus {
+  border-color: var(--primary);
+}
+
 .cat-name-input {
   flex: 1;
   font-size: 15px;
@@ -1290,71 +1324,6 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   border-radius: var(--radius-sm);
   padding: 8px 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-}
-
-/* ── Preset category chips ── */
-.preset-chips {
-  margin-bottom: 16px;
-}
-
-.preset-chips-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-light);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  margin-bottom: 8px;
-}
-
-.preset-chips-scroll {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-@media (max-width: 639px) {
-  .preset-chips-scroll {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .preset-chips-scroll::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-.preset-chip {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  font-size: 13px;
-  font-family: inherit;
-  font-weight: 500;
-  color: var(--text-muted);
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 20px;
-  padding: 6px 12px;
-  cursor: pointer;
-  flex-shrink: 0;
-  min-height: 34px;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.preset-chip:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-light);
-}
-
-.preset-chip:active {
-  opacity: 0.7;
 }
 
 /* ── Category section ── */
@@ -1944,13 +1913,62 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   padding-top: 16px;
 }
 
+.cal-day-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .cal-day-heading {
   font-size: 13px;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  margin-bottom: 12px;
+}
+
+.cal-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cal-sort-label {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-right: 2px;
+}
+
+.cal-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cal-sort-btn--active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+  font-weight: 600;
+}
+
+.cal-sort-arrow {
+  font-size: 11px;
+  line-height: 1;
 }
 
 .cal-empty {
@@ -2157,6 +2175,36 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+/* Product picker filters (category/type) inside the event form */
+.cal-product-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cal-product-filters:has(select:only-child) {
+  grid-template-columns: 1fr;
+}
+
+.cal-hide-expired {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cal-hide-expired input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
 }
 
 .cal-duration-input {

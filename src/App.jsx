@@ -24,6 +24,7 @@ import ChangelogModal from './components/ChangelogModal'
 import SettingsPanel from './components/SettingsPanel'
 import CalendarModal from './components/CalendarModal'
 import Toast from './components/Toast'
+import EmojiPicker from './components/EmojiPicker'
 import { useAuth } from './hooks/useAuth'
 import { useProducts } from './hooks/useProducts'
 import { useCategories } from './hooks/useCategories'
@@ -31,7 +32,6 @@ import { useTypes } from './hooks/useTypes'
 import { useEvents } from './hooks/useEvents'
 import { resizeImage } from './utils/imageUtils'
 import { getProductStatus } from './utils/dateUtils'
-import { CATEGORY_EMOJIS, PRESET_CATEGORIES } from './constants'
 import { LATEST_VERSION } from './changelog'
 import './App.css'
 
@@ -520,9 +520,6 @@ export default function App() {
   const grouped = groupProducts(groupableProducts, categories)
   const categoryIds = displayCategories.map(c => `cat-${c.id}`)
   const uncategorized = grouped.__none || []
-  const unusedPresets = PRESET_CATEGORIES.filter(
-    p => !categories.some(c => c.name.toLowerCase() === p.name.toLowerCase())
-  )
 
   return (
     <div className="app">
@@ -571,17 +568,10 @@ export default function App() {
                   {newCatEmoji || '📁'}
                 </button>
                 {showNewCatEmoji && (
-                  <div className="cat-emoji-picker">
-                    {CATEGORY_EMOJIS.map(e => (
-                      <button
-                        key={e}
-                        className={`cat-emoji-opt${e === newCatEmoji ? ' cat-emoji-opt--active' : ''}`}
-                        onClick={() => { setNewCatEmoji(e); setShowNewCatEmoji(false) }}
-                      >
-                        {e}
-                      </button>
-                    ))}
-                  </div>
+                  <EmojiPicker
+                    value={newCatEmoji}
+                    onSelect={e => { setNewCatEmoji(e); setShowNewCatEmoji(false) }}
+                  />
                 )}
                 <input
                   className="cat-name-input"
@@ -601,24 +591,6 @@ export default function App() {
                 </svg>
                 New category
               </button>
-            )}
-
-            {/* ── Preset category chips ── */}
-            {unusedPresets.length > 0 && (
-              <div className="preset-chips">
-                <span className="preset-chips-label">Suggested</span>
-                <div className="preset-chips-scroll">
-                  {unusedPresets.map(p => (
-                    <button
-                      key={p.name}
-                      className="preset-chip"
-                      onClick={() => addCategory(p.name, p.emoji)}
-                    >
-                      {p.emoji} {p.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
             )}
 
             {/* ── New type form — global; asks which category to attach to ── */}
@@ -641,17 +613,10 @@ export default function App() {
                       {newTypeEmoji || '🏷️'}
                     </button>
                     {showNewTypeEmoji && (
-                      <div className="cat-emoji-picker">
-                        {CATEGORY_EMOJIS.map(e => (
-                          <button
-                            key={e}
-                            className={`cat-emoji-opt${e === newTypeEmoji ? ' cat-emoji-opt--active' : ''}`}
-                            onClick={() => { setNewTypeEmoji(e); setShowNewTypeEmoji(false) }}
-                          >
-                            {e}
-                          </button>
-                        ))}
-                      </div>
+                      <EmojiPicker
+                        value={newTypeEmoji}
+                        onSelect={e => { setNewTypeEmoji(e); setShowNewTypeEmoji(false) }}
+                      />
                     )}
                     <input
                       className="cat-name-input"
@@ -844,6 +809,8 @@ export default function App() {
         <CalendarModal
           events={events}
           products={products}
+          categories={categories}
+          types={types}
           addEvent={addEvent}
           updateEvent={updateEvent}
           deleteEvent={deleteEvent}
