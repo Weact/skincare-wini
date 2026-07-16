@@ -24,6 +24,8 @@ export const CHANGELOG = [
       'Emoji picker now has a "+" option to type or paste any emoji from your own keyboard',
       'Sort a day\'s calendar events by Time, Name, or Duration',
       'Tap the active sort again to flip between ascending/descending — an arrow shows the current direction',
+      'Precise time picker replaced with hour/minute dropdowns — guarantees 24h format on every device',
+      'Opening/expiration date fields now open the calendar from a tap anywhere in the box, not just a tiny corner',
     ],
   },
   {

@@ -9,6 +9,13 @@ const SORT_OPTIONS = [
   { key: 'duration', label: 'Duration' },
 ]
 
+// input[type=time]'s displayed format (12h vs 24h) is governed by the
+// browser/OS locale, not anything the page can reliably force — lang="en-GB"
+// doesn't work everywhere. Two plain selects we render ourselves guarantee
+// 24h display regardless of platform.
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
+
 // Each mode falls back to time as a stable tiebreaker (except time itself,
 // which falls back to name) so equal-ranked events don't jump around
 // unpredictably between renders.
@@ -38,6 +45,18 @@ export default function CalendarModal({ events, products = [], categories = [], 
   const [duration, setDuration] = useState('')
   const [timeOfDay, setTimeOfDay] = useState('')
   const [time, setTime] = useState('')
+  const [timeHour, timeMinute] = time ? time.split(':') : ['', '']
+
+  function handleHourChange(e) {
+    const h = e.target.value
+    setTime(h ? `${h}:${timeMinute || '00'}` : '')
+  }
+
+  function handleMinuteChange(e) {
+    const m = e.target.value
+    setTime(m ? `${timeHour || '00'}:${m}` : '')
+  }
+
   const [productId, setProductId] = useState('')
   const [filterCategoryId, setFilterCategoryId] = useState('')
   const [filterTypeId, setFilterTypeId] = useState('')
@@ -405,14 +424,26 @@ export default function CalendarModal({ events, products = [], categories = [], 
 
                 <div className="cal-form-grid">
                   <div className="field">
-                    <label className="field-label">Precise time</label>
-                    <input
-                      type="time"
-                      className="field-input"
-                      lang="en-GB"
-                      value={time}
-                      onChange={e => setTime(e.target.value)}
-                    />
+                    <label className="field-label">Precise time (24h)</label>
+                    <div className="cal-time-select-row">
+                      <select
+                        className="field-input field-select"
+                        value={timeHour}
+                        onChange={handleHourChange}
+                      >
+                        <option value="">--</option>
+                        {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+                      </select>
+                      <span className="cal-time-colon">:</span>
+                      <select
+                        className="field-input field-select"
+                        value={timeMinute}
+                        onChange={handleMinuteChange}
+                      >
+                        <option value="">--</option>
+                        {MINUTES.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
                   </div>
                   <div className="field">
                     <label className="field-label">Duration</label>

@@ -659,6 +659,23 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   background: transparent;
 }
 
+/* Chromium (Chrome/Edge, incl. Android) splits input[type=date] into
+   clickable mm/dd/yyyy text segments plus a separate tiny calendar-icon
+   button — only that icon actually opens the full picker, so clicking
+   almost anywhere in our (invisible) overlay just focused a hidden date
+   segment instead. Stretching the icon itself over the whole input makes
+   every click count as "click the icon". No effect on Safari/iOS, which
+   doesn't split the field this way and isn't affected by the issue. */
+.date-native::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 /* ── Suggestion banner ── */
 .suggestion {
   display: flex;
@@ -2175,6 +2192,21 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.cal-time-select-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-time-select-row .field-select {
+  text-align: center;
+}
+
+.cal-time-colon {
+  font-weight: 700;
+  color: var(--text-light);
 }
 
 /* Product picker filters (category/type) inside the event form */
