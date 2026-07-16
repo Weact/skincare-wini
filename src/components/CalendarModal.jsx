@@ -471,7 +471,7 @@ export default function CalendarModal({ events, products = [], categories = [], 
                 <div className="cal-event-form-actions">
                   <button
                     type="button"
-                    className="cat-cancel-btn"
+                    className="cat-cancel-btn cat-cancel-btn--text"
                     onClick={() => { setShowForm(false); setEditingId(null); resetForm() }}
                   >
                     Cancel

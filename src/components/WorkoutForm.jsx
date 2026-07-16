@@ -20,6 +20,7 @@ export default function WorkoutForm({ initial = null, lockedDate = null, onSubmi
   const [emoji, setEmoji] = useState(initial?.emoji || '')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [date, setDate] = useState(initial?.date || lockedDate || todayISO())
+  const [location, setLocation] = useState(initial?.location || '')
   const [time, setTime] = useState(initial?.time || '')
   const [duration, setDuration] = useState(initial?.duration ? String(initial.duration) : '')
   const [calories, setCalories] = useState(initial?.calories ? String(initial.calories) : '')
@@ -87,6 +88,7 @@ export default function WorkoutForm({ initial = null, lockedDate = null, onSubmi
       name: name.trim(),
       emoji,
       date,
+      location: location.trim() || null,
       time: time || null,
       duration: duration ? parseInt(duration) : null,
       calories: calories ? parseInt(calories) : null,
@@ -124,6 +126,17 @@ export default function WorkoutForm({ initial = null, lockedDate = null, onSubmi
           onChange={e => setName(e.target.value)}
           placeholder="Workout name — e.g. Push Day"
           autoFocus
+        />
+      </div>
+
+      <div className="field">
+        <label className="field-label">Location</label>
+        <input
+          type="text"
+          className="field-input"
+          value={location}
+          onChange={e => setLocation(e.target.value)}
+          placeholder="e.g. Home, Gym, Park"
         />
       </div>
 
@@ -311,7 +324,7 @@ export default function WorkoutForm({ initial = null, lockedDate = null, onSubmi
       </div>
 
       <div className="cal-event-form-actions">
-        <button type="button" className="cat-cancel-btn" onClick={onCancel}>Cancel</button>
+        <button type="button" className="cat-cancel-btn cat-cancel-btn--text" onClick={onCancel}>Cancel</button>
         <button type="button" className="cat-save-btn" onClick={submit}>
           {initial ? 'Save' : 'Log workout'}
         </button>

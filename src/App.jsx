@@ -686,7 +686,7 @@ export default function App() {
                     />
                   </div>
                   <div className="new-type-global-actions">
-                    <button className="cat-cancel-btn" onClick={() => setShowNewType(false)}>Cancel</button>
+                    <button className="cat-cancel-btn cat-cancel-btn--text" onClick={() => setShowNewType(false)}>Cancel</button>
                     <button className="cat-save-btn" onClick={submitNewType}>Add type</button>
                   </div>
                 </div>

@@ -18,6 +18,9 @@ export const CHANGELOG = [
       'Sort workouts by date, name, duration, calories, or exercise count — ascending or descending',
       'Reset button on sort bars to jump back to the default order',
       'Cards are slightly indented from their section headings for readability',
+      'Fixed the Cancel button being too small and its hover highlight not matching its size in the new type, event, and workout forms',
+      'Fixed the calendar\'s sort bar shifting position when switching sort options or toggling Reset',
+      'Log a location for each workout — e.g. Home, Gym, Park — shown on the card and in the workout calendar',
     ],
   },
   {

@@ -37,6 +37,7 @@ export default function WorkoutCard({ workout, highlight = false, showDate = fal
     workout.exercises?.length
       ? `${workout.exercises.length} exercise${workout.exercises.length === 1 ? '' : 's'}`
       : null,
+    workout.location || null,
   ].filter(Boolean).join(' · ')
 
   return (

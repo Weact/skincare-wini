@@ -1166,6 +1166,16 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   background: var(--bg);
 }
 
+/* Text variant ("Cancel") vs. the icon-only ("✕") default above — sized to
+   match its .cat-save-btn sibling instead of the fixed 32x32 icon box */
+.cat-cancel-btn--text {
+  width: auto;
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* ── Changelog button ── */
 .changelog-btn {
   position: relative;
@@ -1985,9 +1995,8 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 
 .cal-day-heading-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -2003,6 +2012,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 .cal-sort-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 5px;
 }
 

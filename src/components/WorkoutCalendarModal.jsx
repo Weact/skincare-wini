@@ -163,6 +163,7 @@ export default function WorkoutCalendarModal({ workouts, addWorkout, updateWorko
                           w.exercises?.length
                             ? `${w.exercises.length} exercise${w.exercises.length === 1 ? '' : 's'}`
                             : null,
+                          w.location || null,
                         ].filter(Boolean).join(' · ')}
                       </span>
                       {w.exercises?.length > 0 && (
