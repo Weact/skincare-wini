@@ -132,8 +132,9 @@ body {
 
 .app-header-left {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .app-header-right {
@@ -285,16 +286,64 @@ body {
   40% { opacity: 1; transform: scale(1); }
 }
 
-.app-title {
-  font-size: var(--fz-title);
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  color: var(--primary);
-}
-
 .app-count {
   font-size: var(--fz-base);
   color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Tracker mode switch (Skincare / Workouts) ── */
+.mode-switch {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 3px;
+  flex-shrink: 0;
+}
+
+.mode-switch-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 16px;
+  padding: 6px 12px;
+  cursor: pointer;
+  min-height: 32px;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mode-switch-btn--active {
+  color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.mode-switch-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+@media (max-width: 480px) {
+  /* Icons carry the meaning on narrow screens; labels would overflow */
+  .mode-switch-label {
+    display: none;
+  }
+  .mode-switch-btn {
+    padding: 6px 10px;
+  }
+  .app-count {
+    display: none;
+  }
 }
 
 /* ── Main ── */
@@ -1539,11 +1588,14 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 /* ── Product list inside a category ── */
+/* Cards sit a step right of their section heading, like a tab indent,
+   so the heading→content hierarchy reads at a glance */
 .cat-products {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-left: 14px;
 }
 
 /* ── New-type form (global — asks which category to attach the type to) ── */
@@ -1625,6 +1677,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-left: 14px;
 }
 
 /* ── Product drag handle ── */
@@ -1983,6 +2036,17 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   font-weight: 600;
 }
 
+.cal-sort-reset {
+  border-style: dashed;
+  color: var(--text-light);
+}
+
+.cal-sort-reset:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-bg);
+}
+
 .cal-sort-arrow {
   font-size: 11px;
   line-height: 1;
@@ -2261,6 +2325,367 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* ── Workout tracker ── */
+.wk-summary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.wk-summary-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--primary-light);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  min-width: 0;
+}
+
+.wk-summary-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wk-summary-main {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.wk-summary-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Calories input + Auto-estimate button */
+.wk-cal-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wk-cal-row .cal-duration-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.wk-auto-btn {
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  min-height: 46px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wk-auto-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.wk-auto-btn:not(:disabled):active {
+  opacity: 0.75;
+}
+
+/* Steps quick-logger */
+.wk-steps-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 8px 8px 14px;
+  margin-bottom: 16px;
+}
+
+.wk-steps-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wk-steps-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  padding: 7px 11px;
+}
+
+/* Journal sort chips — reuses the calendar's sort styling, but wraps since
+   there are five options */
+.wk-sort-row {
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.wk-flat-list {
+  margin-top: 4px;
+}
+
+/* Day heading with steps count on the right */
+.wk-day-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wk-day-steps {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.wk-form-panel {
+  background: var(--surface);
+  border: 1.5px solid var(--border-input);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.wk-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.wk-form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.wk-date-locked {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+/* Exercises editor rows */
+.wk-exercise-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wk-exercise-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.wk-ex-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.wk-ex-num {
+  width: 58px;
+  flex-shrink: 0;
+  text-align: center;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.wk-ex-x {
+  color: var(--text-light);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.wk-ex-load {
+  width: 72px;
+  flex-shrink: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.wk-ex-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--text-light);
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, color 0.12s;
+}
+
+.wk-ex-remove:hover {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.wk-add-exercise-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-light);
+  background: transparent;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  width: 100%;
+  cursor: pointer;
+  min-height: 38px;
+  margin-top: 8px;
+  transition: border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wk-add-exercise-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.wk-notes {
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.4;
+}
+
+/* Journal */
+.wk-section-heading {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-top: 24px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wk-section-heading--past {
+  margin-top: 32px;
+}
+
+.wk-upcoming-section .wk-day-group {
+  margin-top: 14px;
+}
+
+/* Upcoming workout within the current week */
+.card--week-highlight {
+  box-shadow: 0 0 0 1.5px var(--primary), var(--shadow-card);
+}
+
+.wk-month-section {
+  margin-top: 18px;
+}
+
+/* Staircase hierarchy: month header → day heading (one step) → cards
+   (another step via .wk-day-list's own padding) */
+.wk-month-section .wk-day-group {
+  margin-left: 14px;
+}
+
+.wk-month-header {
+  width: 100%;
+  padding: 6px 0;
+}
+
+.wk-day-group {
+  margin-top: 14px;
+}
+
+.wk-day-group .cal-day-heading {
+  margin-bottom: 8px;
+}
+
+.wk-day-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 14px;
+}
+
+/* …except in the flat sorted view, which has no headings to indent from */
+.wk-flat-list {
+  padding-left: 0;
+}
+
+.wk-card-emoji {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.wk-exercise-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.wk-exercise {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.wk-exercise:last-child {
+  border-bottom: none;
+}
+
+.wk-exercise-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  min-width: 0;
+}
+
+.wk-exercise-detail {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wk-notes-text {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.wk-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* ── Tablet / desktop adjustments ── */

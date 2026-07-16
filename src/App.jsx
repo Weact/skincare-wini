@@ -23,6 +23,8 @@ import AuthButton from './components/AuthButton'
 import ChangelogModal from './components/ChangelogModal'
 import SettingsPanel from './components/SettingsPanel'
 import CalendarModal from './components/CalendarModal'
+import WorkoutCalendarModal from './components/WorkoutCalendarModal'
+import WorkoutTracker from './components/WorkoutTracker'
 import Toast from './components/Toast'
 import EmojiPicker from './components/EmojiPicker'
 import { useAuth } from './hooks/useAuth'
@@ -30,6 +32,8 @@ import { useProducts } from './hooks/useProducts'
 import { useCategories } from './hooks/useCategories'
 import { useTypes } from './hooks/useTypes'
 import { useEvents } from './hooks/useEvents'
+import { useWorkouts } from './hooks/useWorkouts'
+import { useSteps } from './hooks/useSteps'
 import { resizeImage } from './utils/imageUtils'
 import { getProductStatus } from './utils/dateUtils'
 import { LATEST_VERSION } from './changelog'
@@ -133,8 +137,25 @@ export default function App() {
   const { categories, addCategory, updateCategory, deleteCategory, reorderCategories } = useCategories(user?.uid)
   const { types, addType, updateType, deleteType, reorderTypes } = useTypes(user?.uid)
   const { events, addEvent, updateEvent, deleteEvent } = useEvents(user?.uid)
+  const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts(user?.uid)
+  const { steps, logSteps } = useSteps(user?.uid)
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarTarget, setCalendarTarget] = useState(null)
+  const [workoutCalendarTarget, setWorkoutCalendarTarget] = useState(null)
+
+  function handleOpenWorkoutInCalendar(workout) {
+    setWorkoutCalendarTarget({ date: workout.date, workoutId: workout.id })
+    setShowCalendar(true)
+  }
+
+  // Which tracker is active — skincare products or workout journal.
+  // Persisted so the app reopens where the user left off.
+  const [mode, setMode] = useState(() => localStorage.getItem('trackerMode') || 'skincare')
+
+  function switchMode(next) {
+    setMode(next)
+    localStorage.setItem('trackerMode', next)
+  }
 
   function handleOpenEvent(event) {
     setCalendarTarget({ date: event.date, eventId: event.id })
@@ -525,9 +546,30 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="app-header-left">
-          <h1 className="app-title">Skincare</h1>
+          <div className="mode-switch" role="tablist" aria-label="Tracker">
+            <button
+              role="tab"
+              aria-selected={mode === 'skincare'}
+              className={`mode-switch-btn${mode === 'skincare' ? ' mode-switch-btn--active' : ''}`}
+              onClick={() => switchMode('skincare')}
+            >
+              <span className="mode-switch-icon">🧴</span>
+              <span className="mode-switch-label">Skincare</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={mode === 'workout'}
+              className={`mode-switch-btn${mode === 'workout' ? ' mode-switch-btn--active' : ''}`}
+              onClick={() => switchMode('workout')}
+            >
+              <span className="mode-switch-icon">🏋️</span>
+              <span className="mode-switch-label">Workouts</span>
+            </button>
+          </div>
           <span className="app-count">
-            {products.length} {products.length === 1 ? 'product' : 'products'}
+            {mode === 'workout'
+              ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`
+              : `${products.length} ${products.length === 1 ? 'product' : 'products'}`}
           </span>
         </div>
         <div className="app-header-right">
@@ -537,7 +579,11 @@ export default function App() {
             </svg>
             {changelogIsNew && <span className="changelog-dot" />}
           </button>
-          <button className="calendar-btn" onClick={() => setShowCalendar(true)} aria-label="Routine calendar">
+          <button
+            className="calendar-btn"
+            onClick={() => setShowCalendar(true)}
+            aria-label={mode === 'workout' ? 'Workout calendar' : 'Routine calendar'}
+          >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="2"/>
               <path d="M3 9.5h18" stroke="currentColor" strokeWidth="2"/>
@@ -547,7 +593,7 @@ export default function App() {
           <button className="settings-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
-              <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
           <AuthButton user={user} onLinkGoogle={linkWithGoogle} onSignOut={handleSignOut} />
@@ -559,6 +605,18 @@ export default function App() {
           <div className="app-loading">
             <div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" />
           </div>
+        ) : mode === 'workout' ? (
+          <WorkoutTracker
+            workouts={workouts}
+            steps={steps}
+            logSteps={logSteps}
+            addWorkout={addWorkout}
+            updateWorkout={updateWorkout}
+            deleteWorkout={deleteWorkout}
+            onLogged={() => showToast('Workout logged 💪')}
+            onStepsLogged={() => showToast('Steps logged 👟')}
+            onOpenCalendar={handleOpenWorkoutInCalendar}
+          />
         ) : (
           <>
             {/* ── New category form ── */}
@@ -783,19 +841,21 @@ export default function App() {
         )}
       </main>
 
-      <div className="fab-group">
-        <button className="fab fab--secondary" onClick={() => photoInputRef.current.click()} aria-label="Add product with photo">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2"/>
-          </svg>
-        </button>
-        <button className="fab" onClick={() => handleAddProduct()} aria-label="Add product">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-          </svg>
-        </button>
-      </div>
+      {mode === 'skincare' && (
+        <div className="fab-group">
+          <button className="fab fab--secondary" onClick={() => photoInputRef.current.click()} aria-label="Add product with photo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </button>
+          <button className="fab" onClick={() => handleAddProduct()} aria-label="Add product">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+      )}
 
       <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFAB} />
 
@@ -805,7 +865,16 @@ export default function App() {
       {showSettings && (
         <SettingsPanel settings={settings} onUpdate={updateSetting} onClose={() => setShowSettings(false)} />
       )}
-      {showCalendar && (
+      {showCalendar && (mode === 'workout' ? (
+        <WorkoutCalendarModal
+          workouts={workouts}
+          addWorkout={addWorkout}
+          updateWorkout={updateWorkout}
+          deleteWorkout={deleteWorkout}
+          jumpTo={workoutCalendarTarget}
+          onClose={() => { setShowCalendar(false); setWorkoutCalendarTarget(null) }}
+        />
+      ) : (
         <CalendarModal
           events={events}
           products={products}
@@ -817,7 +886,7 @@ export default function App() {
           jumpTo={calendarTarget}
           onClose={() => { setShowCalendar(false); setCalendarTarget(null) }}
         />
-      )}
+      ))}
 
       <Toast message={toast} />
     </div>
