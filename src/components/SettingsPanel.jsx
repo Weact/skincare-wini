@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 
 const ACCENTS = [
   { key: 'rose',     color: '#c8727a', label: 'Rose'     },
@@ -22,6 +22,18 @@ const FONT_SIZES = [
 ]
 
 export default function SettingsPanel({ settings, onUpdate, onClose }) {
+  // Body weight for the workout calorie estimate — device-local, same key
+  // WorkoutForm reads (and first asks for) when estimating
+  const [weight, setWeight] = useState(() => localStorage.getItem('bodyWeightKg') || '')
+
+  function handleWeightChange(e) {
+    const val = e.target.value
+    setWeight(val)
+    const kg = parseFloat(val)
+    if (kg > 0) localStorage.setItem('bodyWeightKg', String(kg))
+    else localStorage.removeItem('bodyWeightKg')
+  }
+
   useEffect(() => {
     function handle(e) { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handle)
@@ -116,6 +128,28 @@ export default function SettingsPanel({ settings, onUpdate, onClose }) {
                   {s.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* ── Workout ── */}
+          <div className="settings-section">
+            <div className="settings-section-title">Workout</div>
+            <div className="field">
+              <label className="field-label">Body weight</label>
+              <div className="field-hint">
+                Used for the calorie auto-estimate — stored on this device only
+              </div>
+              <div className="cal-duration-input settings-weight">
+                <input
+                  type="number"
+                  min="1"
+                  className="field-input"
+                  value={weight}
+                  onChange={handleWeightChange}
+                  placeholder="70"
+                />
+                <span className="cal-duration-suffix">kg</span>
+              </div>
             </div>
           </div>
 

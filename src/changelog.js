@@ -1,5 +1,26 @@
 export const CHANGELOG = [
   {
+    version: '1.8',
+    date: 'Jul 2026',
+    entries: [
+      'Workout tracking — switch between Skincare and Workouts from the header',
+      'Log workouts with exercises: sets, reps, and weight or distance',
+      'Training journal grouped by day, with a this-week summary',
+      'Workouts get their own calendar, separate from the skincare routine',
+      'Track calories per workout — counted into the summaries',
+      'Week AND month summary tiles: workouts, minutes, calories, and steps at a glance',
+      'Daily step counter — log your steps for today, see them on each day of the journal',
+      'Auto-estimate calories from duration, intensity, and your body weight (MET formula)',
+      'Change your body weight anytime from Settings → Workout',
+      'Workout cards link straight to their spot on the workout calendar',
+      'Upcoming workouts are separated from the Past workouts section, with this week\'s highlighted',
+      'Upcoming and past workouts are grouped under collapsible month sections',
+      'Sort workouts by date, name, duration, calories, or exercise count — ascending or descending',
+      'Reset button on sort bars to jump back to the default order',
+      'Cards are slightly indented from their section headings for readability',
+    ],
+  },
+  {
     version: '1.7',
     date: 'Jul 2026',
     entries: [

@@ -1,20 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
-import { TIME_OF_DAY } from '../constants'
+import { HOURS, MINUTES, TIME_OF_DAY } from '../constants'
 import { todayISO, getMonthGrid, formatMonthYear, formatDayHeading, formatEventTime, getProductStatus } from '../utils/dateUtils'
 import EmojiPicker from './EmojiPicker'
 
+// dirLabels spell the order out on the active chip, since bare arrows are
+// read two opposite ways; the arrow itself follows the spreadsheet
+// convention (↑ = ascending)
 const SORT_OPTIONS = [
-  { key: 'time', label: 'Time' },
-  { key: 'name', label: 'Name' },
-  { key: 'duration', label: 'Duration' },
+  { key: 'time',     label: 'Time',     dirLabels: { asc: 'early→late', desc: 'late→early' } },
+  { key: 'name',     label: 'Name',     dirLabels: { asc: 'A→Z',        desc: 'Z→A' } },
+  { key: 'duration', label: 'Duration', dirLabels: { asc: '1→9',        desc: '9→1' } },
 ]
-
-// input[type=time]'s displayed format (12h vs 24h) is governed by the
-// browser/OS locale, not anything the page can reliably force — lang="en-GB"
-// doesn't work everywhere. Two plain selects we render ourselves guarantee
-// 24h display regardless of platform.
-const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
-const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
 
 // Each mode falls back to time as a stable tiebreaker (except time itself,
 // which falls back to name) so equal-ranked events don't jump around
@@ -276,11 +272,22 @@ export default function CalendarModal({ events, products = [], categories = [], 
                       >
                         {opt.label}
                         {active && (
-                          <span className="cal-sort-arrow">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                          <span className="cal-sort-arrow">
+                            {sortDir === 'asc' ? '↑' : '↓'} {opt.dirLabels[sortDir]}
+                          </span>
                         )}
                       </button>
                     )
                   })}
+                  {(sortBy !== 'time' || sortDir !== 'asc') && (
+                    <button
+                      type="button"
+                      className="cal-sort-btn cal-sort-reset"
+                      onClick={() => { setSortBy('time'); setSortDir('asc') }}
+                    >
+                      ✕ Reset
+                    </button>
+                  )}
                 </div>
               )}
             </div>
