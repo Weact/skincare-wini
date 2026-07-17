@@ -28,8 +28,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose, user, profi
   const [weight, setWeight] = useState(() => localStorage.getItem('bodyWeightKg') || '')
   const [codeInput, setCodeInput] = useState('')
   const [copied, setCopied] = useState(false)
-  const [viewerCodeCopied, setViewerCodeCopied] = useState(false)
-  const [viewerCodeInput, setViewerCodeInput] = useState('')
+  const [whitelistCodeInput, setWhitelistCodeInput] = useState('')
   const [addViewerError, setAddViewerError] = useState('')
 
   const visibility = profile?.profileVisibility || 'private'
@@ -41,20 +40,13 @@ export default function SettingsPanel({ settings, onUpdate, onClose, user, profi
     setTimeout(() => setCopied(false), 2000)
   }
 
-  function handleCopyViewerCode() {
-    if (!profile?.viewerCode) return
-    navigator.clipboard?.writeText(profile.viewerCode)
-    setViewerCodeCopied(true)
-    setTimeout(() => setViewerCodeCopied(false), 2000)
-  }
-
   async function handleAddViewer() {
-    const code = viewerCodeInput.trim()
+    const code = whitelistCodeInput.trim()
     if (!code) return
     setAddViewerError('')
     try {
       await onAddViewer(code)
-      setViewerCodeInput('')
+      setWhitelistCodeInput('')
     } catch {
       setAddViewerError("That code doesn't match anyone")
     }
@@ -230,20 +222,24 @@ export default function SettingsPanel({ settings, onUpdate, onClose, user, profi
                 </button>
               </div>
 
-              {visibility !== 'private' && profile?.profileCode && (
+              <div className="field">
+                <label className="field-label">Your code</label>
+                <div className="field-hint">
+                  Share it so someone can view your profile (if Public, or once you've whitelisted them) — or give it to someone else so they can add you to their own whitelist.
+                </div>
                 <div className="profile-code-row">
-                  <span className="profile-code">{profile.profileCode}</span>
-                  <button type="button" className="cat-save-btn" onClick={handleCopyCode}>
+                  <span className="profile-code">{profile?.profileCode || 'Generating…'}</span>
+                  <button type="button" className="cat-save-btn" onClick={handleCopyCode} disabled={!profile?.profileCode}>
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
-              )}
+              </div>
 
               {visibility === 'whitelist' && (
                 <div className="field">
                   <label className="field-label">Allowed viewers</label>
                   <div className="field-hint">
-                    Only people whose viewer code you add here can view your shared profile.
+                    Only people whose code you add here can view your shared profile.
                   </div>
                   {profile?.allowedViewerUids?.length > 0 && (
                     <ul className="whitelist-list">
@@ -266,17 +262,17 @@ export default function SettingsPanel({ settings, onUpdate, onClose, user, profi
                     <input
                       type="text"
                       className="field-input"
-                      value={viewerCodeInput}
-                      onChange={e => { setViewerCodeInput(e.target.value.toUpperCase()); setAddViewerError('') }}
+                      value={whitelistCodeInput}
+                      onChange={e => { setWhitelistCodeInput(e.target.value.toUpperCase()); setAddViewerError('') }}
                       onKeyDown={e => { if (e.key === 'Enter') handleAddViewer() }}
-                      placeholder="Paste their viewer code"
+                      placeholder="Paste their code"
                       maxLength={7}
                     />
                     <button
                       type="button"
                       className="wk-auto-btn"
                       onClick={handleAddViewer}
-                      disabled={!viewerCodeInput.trim()}
+                      disabled={!whitelistCodeInput.trim()}
                     >
                       Add
                     </button>
@@ -284,19 +280,6 @@ export default function SettingsPanel({ settings, onUpdate, onClose, user, profi
                   {addViewerError && <div className="field-hint field-hint--error">{addViewerError}</div>}
                 </div>
               )}
-
-              <div className="field">
-                <label className="field-label">Your viewer code</label>
-                <div className="field-hint">
-                  Give this to someone so they can add you to their whitelist — it's a separate code from your share code above, and never reveals your account ID
-                </div>
-                <div className="profile-view-row">
-                  <span className="profile-code">{profile?.viewerCode || 'Generating…'}</span>
-                  <button type="button" className="cat-save-btn" onClick={handleCopyViewerCode} disabled={!profile?.viewerCode}>
-                    {viewerCodeCopied ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-              </div>
 
               <div className="field">
                 <label className="field-label">View a shared profile</label>
