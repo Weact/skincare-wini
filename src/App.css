@@ -565,6 +565,11 @@ body {
   color: var(--text-light);
 }
 
+.field-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .field-input:focus {
   border-color: var(--primary);
   background: var(--surface);
@@ -2415,6 +2420,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 .wk-steps-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   background: var(--surface);
   border: 1.5px solid var(--border);
@@ -2431,9 +2437,19 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   flex-shrink: 0;
 }
 
+.wk-steps-date {
+  flex-shrink: 0;
+  width: 140px;
+}
+
+.wk-steps-date .date-display {
+  min-height: 38px;
+  padding: 7px 11px;
+}
+
 .wk-steps-input {
   flex: 1;
-  min-width: 0;
+  min-width: 90px;
   min-height: 38px;
   padding: 7px 11px;
 }

@@ -29,6 +29,13 @@ export const WORKOUT_INTENSITIES = [
   { key: 'veryhard', label: 'Very hard', met: 9 },
 ]
 
+// Trackers the app offers — used to build the header mode switch and the
+// "Trackers" checkboxes in Settings from one shared list
+export const TRACKERS = [
+  { key: 'skincare', label: 'Skincare', icon: '🧴' },
+  { key: 'workout',  label: 'Workouts', icon: '🏋️' },
+]
+
 export const TIME_OF_DAY = [
   { key: 'morning',   label: 'Morning',   icon: '🌅' },
   { key: 'noon',      label: 'Noon',      icon: '🌞' },

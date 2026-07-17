@@ -1,6 +1,6 @@
 import { formatDisplayDate } from '../utils/dateUtils'
 
-export default function DateInput({ value, onChange, id }) {
+export default function DateInput({ value, onChange, id, max }) {
   return (
     <div className="date-field">
       <div className="date-display">
@@ -21,6 +21,7 @@ export default function DateInput({ value, onChange, id }) {
         className="date-native"
         value={value || ''}
         onChange={onChange}
+        max={max}
       />
     </div>
   )

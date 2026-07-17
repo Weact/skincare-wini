@@ -3,6 +3,7 @@ import { todayISO, formatDayHeading, formatMonthYear } from '../utils/dateUtils'
 import { mondayOfWeek, sundayOfWeek } from '../utils/workoutUtils'
 import WorkoutForm from './WorkoutForm'
 import WorkoutCard from './WorkoutCard'
+import DateInput from './DateInput'
 
 // dirLabels spell the order out on the active chip, since bare arrows are
 // read two opposite ways; the arrow itself follows the spreadsheet
@@ -185,16 +186,18 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
   const week = summarize(thisWeek, pastStepDates.filter(d => d >= weekStart))
   const month = summarize(thisMonth, pastStepDates.filter(d => d.slice(0, 7) === currentMonthKey))
 
-  // Draft for the "steps today" quick logger, kept in sync with the stored value
-  const todaySteps = stepsByDate[today] || 0
+  // Steps quick logger — defaults to today but can target any past day;
+  // the draft stays in sync with whichever date is currently selected
+  const [stepsDate, setStepsDate] = useState(today)
+  const selectedSteps = stepsByDate[stepsDate] || 0
   const [stepsDraft, setStepsDraft] = useState('')
   useEffect(() => {
-    setStepsDraft(todaySteps ? String(todaySteps) : '')
-  }, [todaySteps])
+    setStepsDraft(selectedSteps ? String(selectedSteps) : '')
+  }, [stepsDate, selectedSteps])
 
   function saveSteps() {
     const val = stepsDraft ? parseInt(stepsDraft) : 0
-    logSteps?.(today, val > 0 ? val : null)
+    logSteps?.(stepsDate, val > 0 ? val : null)
     if (val > 0) onStepsLogged?.()
   }
 
@@ -234,7 +237,10 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
       )}
 
       <div className="wk-steps-row">
-        <span className="wk-steps-label">👟 Steps today</span>
+        <span className="wk-steps-label">👟 Steps</span>
+        <div className="wk-steps-date">
+          <DateInput value={stepsDate} onChange={e => setStepsDate(e.target.value || today)} max={today} />
+        </div>
         <input
           type="number"
           min="0"

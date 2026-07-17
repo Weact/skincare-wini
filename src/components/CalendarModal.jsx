@@ -431,7 +431,7 @@ export default function CalendarModal({ events, products = [], categories = [], 
 
                 <div className="cal-form-grid">
                   <div className="field">
-                    <label className="field-label">Precise time (24h)</label>
+                    <label className="field-label">Time</label>
                     <div className="cal-time-select-row">
                       <select
                         className="field-input field-select"

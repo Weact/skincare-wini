@@ -34,10 +34,27 @@ import { useTypes } from './hooks/useTypes'
 import { useEvents } from './hooks/useEvents'
 import { useWorkouts } from './hooks/useWorkouts'
 import { useSteps } from './hooks/useSteps'
+import WelcomeScreen from './components/WelcomeScreen'
 import { resizeImage } from './utils/imageUtils'
 import { getProductStatus } from './utils/dateUtils'
 import { LATEST_VERSION } from './changelog'
+import { TRACKERS } from './constants'
 import './App.css'
+
+// Which trackers the user has opted into — device-local, defaults to all of
+// them so existing users see no change. Read directly from localStorage
+// (rather than through `settings`) so the very first `mode` computation
+// below doesn't have to wait on that state existing yet.
+function getStoredEnabledTrackers() {
+  try {
+    const raw = localStorage.getItem('enabledTrackers')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed
+    }
+  } catch {}
+  return TRACKERS.map(t => t.key)
+}
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)
@@ -148,13 +165,19 @@ export default function App() {
     setShowCalendar(true)
   }
 
-  // Which tracker is active — skincare products or workout journal.
+  // Which tracker is active — skincare products or workout journal, or null
+  // if the user has no tracker enabled (shows the welcome screen instead).
   // Persisted so the app reopens where the user left off.
-  const [mode, setMode] = useState(() => localStorage.getItem('trackerMode') || 'skincare')
+  const [mode, setMode] = useState(() => {
+    const enabled = getStoredEnabledTrackers()
+    const stored = localStorage.getItem('trackerMode')
+    return stored && enabled.includes(stored) ? stored : (enabled[0] || null)
+  })
 
   function switchMode(next) {
     setMode(next)
-    localStorage.setItem('trackerMode', next)
+    if (next) localStorage.setItem('trackerMode', next)
+    else localStorage.removeItem('trackerMode')
   }
 
   function handleOpenEvent(event) {
@@ -266,6 +289,7 @@ export default function App() {
     accent:   localStorage.getItem('accent')   || 'rose',
     font:     localStorage.getItem('font')     || 'system',
     fontSize: localStorage.getItem('fontSize') || 'md',
+    enabledTrackers: getStoredEnabledTrackers(),
   }))
 
   useEffect(() => {
@@ -280,7 +304,19 @@ export default function App() {
     localStorage.setItem('accent',   settings.accent)
     localStorage.setItem('font',     settings.font)
     localStorage.setItem('fontSize', settings.fontSize)
+    localStorage.setItem('enabledTrackers', JSON.stringify(settings.enabledTrackers))
   }, [settings])
+
+  // If the active (or last-active) tracker gets unchecked in Settings, fall
+  // back to another enabled one, or to the welcome screen if none are left.
+  useEffect(() => {
+    if (mode && !settings.enabledTrackers.includes(mode)) {
+      switchMode(settings.enabledTrackers[0] || null)
+    } else if (!mode && settings.enabledTrackers.length > 0) {
+      switchMode(settings.enabledTrackers[0])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.enabledTrackers])
 
   function updateSetting(key, value) {
     setSettings(s => ({ ...s, [key]: value }))
@@ -546,31 +582,29 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="app-header-left">
-          <div className="mode-switch" role="tablist" aria-label="Tracker">
-            <button
-              role="tab"
-              aria-selected={mode === 'skincare'}
-              className={`mode-switch-btn${mode === 'skincare' ? ' mode-switch-btn--active' : ''}`}
-              onClick={() => switchMode('skincare')}
-            >
-              <span className="mode-switch-icon">🧴</span>
-              <span className="mode-switch-label">Skincare</span>
-            </button>
-            <button
-              role="tab"
-              aria-selected={mode === 'workout'}
-              className={`mode-switch-btn${mode === 'workout' ? ' mode-switch-btn--active' : ''}`}
-              onClick={() => switchMode('workout')}
-            >
-              <span className="mode-switch-icon">🏋️</span>
-              <span className="mode-switch-label">Workouts</span>
-            </button>
-          </div>
-          <span className="app-count">
-            {mode === 'workout'
-              ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`
-              : `${products.length} ${products.length === 1 ? 'product' : 'products'}`}
-          </span>
+          {mode && (
+            <div className="mode-switch" role="tablist" aria-label="Tracker">
+              {TRACKERS.filter(t => settings.enabledTrackers.includes(t.key)).map(t => (
+                <button
+                  key={t.key}
+                  role="tab"
+                  aria-selected={mode === t.key}
+                  className={`mode-switch-btn${mode === t.key ? ' mode-switch-btn--active' : ''}`}
+                  onClick={() => switchMode(t.key)}
+                >
+                  <span className="mode-switch-icon">{t.icon}</span>
+                  <span className="mode-switch-label">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {mode && (
+            <span className="app-count">
+              {mode === 'workout'
+                ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`
+                : `${products.length} ${products.length === 1 ? 'product' : 'products'}`}
+            </span>
+          )}
         </div>
         <div className="app-header-right">
           <button className="changelog-btn" onClick={openChangelog} aria-label="What's new">
@@ -579,17 +613,19 @@ export default function App() {
             </svg>
             {changelogIsNew && <span className="changelog-dot" />}
           </button>
-          <button
-            className="calendar-btn"
-            onClick={() => setShowCalendar(true)}
-            aria-label={mode === 'workout' ? 'Workout calendar' : 'Routine calendar'}
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="2"/>
-              <path d="M3 9.5h18" stroke="currentColor" strokeWidth="2"/>
-              <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </button>
+          {mode && (
+            <button
+              className="calendar-btn"
+              onClick={() => setShowCalendar(true)}
+              aria-label={mode === 'workout' ? 'Workout calendar' : 'Routine calendar'}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="2"/>
+                <path d="M3 9.5h18" stroke="currentColor" strokeWidth="2"/>
+                <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          )}
           <button className="settings-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
@@ -605,6 +641,8 @@ export default function App() {
           <div className="app-loading">
             <div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" />
           </div>
+        ) : !mode ? (
+          <WelcomeScreen onOpenSettings={() => setShowSettings(true)} />
         ) : mode === 'workout' ? (
           <WorkoutTracker
             workouts={workouts}

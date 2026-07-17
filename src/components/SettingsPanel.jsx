@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { TRACKERS } from '../constants'
 
 const ACCENTS = [
   { key: 'rose',     color: '#c8727a', label: 'Rose'     },
@@ -34,6 +35,15 @@ export default function SettingsPanel({ settings, onUpdate, onClose }) {
     else localStorage.removeItem('bodyWeightKg')
   }
 
+  const workoutEnabled = settings.enabledTrackers.includes('workout')
+
+  function toggleTracker(key) {
+    const next = settings.enabledTrackers.includes(key)
+      ? settings.enabledTrackers.filter(k => k !== key)
+      : [...settings.enabledTrackers, key]
+    onUpdate('enabledTrackers', next)
+  }
+
   useEffect(() => {
     function handle(e) { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handle)
@@ -53,6 +63,26 @@ export default function SettingsPanel({ settings, onUpdate, onClose }) {
         </div>
 
         <div className="modal-body">
+
+          {/* ── Trackers ── */}
+          <div className="settings-section">
+            <div className="settings-section-title">Trackers</div>
+            <div className="field-hint">
+              Unchecked trackers are hidden from the header entirely
+            </div>
+            <div className="settings-tracker-list">
+              {TRACKERS.map(t => (
+                <label key={t.key} className="cal-hide-expired">
+                  <input
+                    type="checkbox"
+                    checked={settings.enabledTrackers.includes(t.key)}
+                    onChange={() => toggleTracker(t.key)}
+                  />
+                  {t.icon} {t.label}
+                </label>
+              ))}
+            </div>
+          </div>
 
           {/* ── Appearance ── */}
           <div className="settings-section">
@@ -137,7 +167,9 @@ export default function SettingsPanel({ settings, onUpdate, onClose }) {
             <div className="field">
               <label className="field-label">Body weight</label>
               <div className="field-hint">
-                Used for the calorie auto-estimate — stored on this device only
+                {workoutEnabled
+                  ? 'Used for the calorie auto-estimate — stored on this device only'
+                  : 'This option is disabled since Workouts is not enabled on this account. To be able to change it, enable Workouts in the Trackers settings above.'}
               </div>
               <div className="cal-duration-input settings-weight">
                 <input
@@ -147,6 +179,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }) {
                   value={weight}
                   onChange={handleWeightChange}
                   placeholder="70"
+                  disabled={!workoutEnabled}
                 />
                 <span className="cal-duration-suffix">kg</span>
               </div>

@@ -21,6 +21,9 @@ export const CHANGELOG = [
       'Fixed the Cancel button being too small and its hover highlight not matching its size in the new type, event, and workout forms',
       'Fixed the calendar\'s sort bar shifting position when switching sort options or toggling Reset',
       'Log a location for each workout — e.g. Home, Gym, Park — shown on the card and in the workout calendar',
+      'New Trackers section in Settings — turn Skincare and/or Workouts on or off; disabled trackers are hidden from the header entirely',
+      'A welcome screen invites you to enable a tracker in Settings if none are turned on',
+      'Step logger now targets any past day, not just today — pick the date, then log its count',
     ],
   },
   {
