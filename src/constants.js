@@ -30,10 +30,20 @@ export const WORKOUT_INTENSITIES = [
 ]
 
 // Trackers the app offers — used to build the header mode switch and the
-// "Trackers" checkboxes in Settings from one shared list
+// "Trackers" checkboxes in Settings from one shared list. `defaultEnabled`
+// controls what a brand-new install starts with (poop is opt-in).
 export const TRACKERS = [
-  { key: 'skincare', label: 'Skincare', icon: '🧴' },
-  { key: 'workout',  label: 'Workouts', icon: '🏋️' },
+  { key: 'skincare', label: 'Skincare', icon: '🧴',  defaultEnabled: true },
+  { key: 'workout',  label: 'Workouts', icon: '🏋️', defaultEnabled: true },
+  { key: 'poop',     label: 'Poop',     icon: '💩',  defaultEnabled: false },
+]
+
+// How a logged poop felt — asked once per entry, right when it's logged
+export const POOP_FEELINGS = [
+  { key: 'bad',   label: 'Bad',   icon: '😖' },
+  { key: 'okay',  label: 'Okay',  icon: '😐' },
+  { key: 'good',  label: 'Good',  icon: '🙂' },
+  { key: 'great', label: 'Great', icon: '😌' },
 ]
 
 export const TIME_OF_DAY = [

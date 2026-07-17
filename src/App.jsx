@@ -25,6 +25,7 @@ import SettingsPanel from './components/SettingsPanel'
 import CalendarModal from './components/CalendarModal'
 import WorkoutCalendarModal from './components/WorkoutCalendarModal'
 import WorkoutTracker from './components/WorkoutTracker'
+import PoopTracker from './components/PoopTracker'
 import Toast from './components/Toast'
 import EmojiPicker from './components/EmojiPicker'
 import { useAuth } from './hooks/useAuth'
@@ -34,6 +35,7 @@ import { useTypes } from './hooks/useTypes'
 import { useEvents } from './hooks/useEvents'
 import { useWorkouts } from './hooks/useWorkouts'
 import { useSteps } from './hooks/useSteps'
+import { usePoops } from './hooks/usePoops'
 import WelcomeScreen from './components/WelcomeScreen'
 import { resizeImage } from './utils/imageUtils'
 import { getProductStatus } from './utils/dateUtils'
@@ -41,10 +43,11 @@ import { LATEST_VERSION } from './changelog'
 import { TRACKERS } from './constants'
 import './App.css'
 
-// Which trackers the user has opted into — device-local, defaults to all of
-// them so existing users see no change. Read directly from localStorage
-// (rather than through `settings`) so the very first `mode` computation
-// below doesn't have to wait on that state existing yet.
+// Which trackers the user has opted into — device-local, defaults to each
+// tracker's own `defaultEnabled` flag (so existing Skincare/Workout users
+// see no change, while opt-in trackers like Poop start off). Read directly
+// from localStorage (rather than through `settings`) so the very first
+// `mode` computation below doesn't have to wait on that state existing yet.
 function getStoredEnabledTrackers() {
   try {
     const raw = localStorage.getItem('enabledTrackers')
@@ -53,7 +56,7 @@ function getStoredEnabledTrackers() {
       if (Array.isArray(parsed)) return parsed
     }
   } catch {}
-  return TRACKERS.map(t => t.key)
+  return TRACKERS.filter(t => t.defaultEnabled).map(t => t.key)
 }
 
 function generateId() {
@@ -156,6 +159,7 @@ export default function App() {
   const { events, addEvent, updateEvent, deleteEvent } = useEvents(user?.uid)
   const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts(user?.uid)
   const { steps, logSteps } = useSteps(user?.uid)
+  const { poops, addPoop, deletePoop } = usePoops(user?.uid)
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarTarget, setCalendarTarget] = useState(null)
   const [workoutCalendarTarget, setWorkoutCalendarTarget] = useState(null)
@@ -272,6 +276,11 @@ export default function App() {
   const [newTypeCategoryId, setNewTypeCategoryId] = useState('')
   const newTypeEmojiRef = useRef(null)
 
+  // + FAB's "what do you want to add" menu — replaces the old standalone
+  // "New category" / "Add type" buttons
+  const [showAddMenu, setShowAddMenu] = useState(false)
+  const addMenuRef = useRef(null)
+
   const [showChangelog, setShowChangelog] = useState(false)
   const [changelogIsNew, setChangelogIsNew] = useState(
     () => localStorage.getItem('lastSeenChangelog') !== LATEST_VERSION
@@ -331,6 +340,9 @@ export default function App() {
       if (newTypeEmojiRef.current && !newTypeEmojiRef.current.contains(e.target)) {
         setShowNewTypeEmoji(false)
       }
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target)) {
+        setShowAddMenu(false)
+      }
     }
     document.addEventListener('mousedown', handle)
     document.addEventListener('touchstart', handle)
@@ -356,6 +368,19 @@ export default function App() {
     // New products always start uncategorized — there's no way yet to add
     // directly into a specific category from the FABs
     showToast('Added product to Uncategorized')
+  }
+
+  // The + FAB's menu — scrolls up too, since the category/type forms it
+  // opens render at the top of the list, off-screen if you'd scrolled down
+  function handleAddMenuSelect(kind) {
+    setShowAddMenu(false)
+    if (kind === 'product') {
+      handleAddProduct()
+      return
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (kind === 'category') setShowNewCat(true)
+    else if (kind === 'type') openNewTypeForm()
   }
 
   async function handlePhotoFAB(e) {
@@ -581,59 +606,71 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="app-header-left">
-          {mode && (
-            <div className="mode-switch" role="tablist" aria-label="Tracker">
-              {TRACKERS.filter(t => settings.enabledTrackers.includes(t.key)).map(t => (
+        <div className="app-header-top">
+          <div className="app-header-left">
+            {mode && (
+              <div className="mode-switch" role="tablist" aria-label="Tracker">
+                {TRACKERS.filter(t => settings.enabledTrackers.includes(t.key)).map(t => (
+                  <button
+                    key={t.key}
+                    role="tab"
+                    aria-selected={mode === t.key}
+                    className={`mode-switch-btn${mode === t.key ? ' mode-switch-btn--active' : ''}`}
+                    onClick={() => switchMode(t.key)}
+                  >
+                    <span className="mode-switch-icon">{t.icon}</span>
+                    <span className="mode-switch-label">{t.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="app-header-right">
+            {/* Grouped into one pill (mirroring the tracker switch on the
+                left) so these stay in the same order across every tracker.
+                Poop has no calendar modal to open, so its button is left out
+                entirely rather than shown disabled — an empty gap in the
+                pill would look more broken than the pill simply being
+                narrower for that tracker. */}
+            <div className="header-icon-group">
+              <button className="changelog-btn" onClick={openChangelog} aria-label="What's new">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                </svg>
+                {changelogIsNew && <span className="changelog-dot" />}
+              </button>
+              {mode && mode !== 'poop' && (
                 <button
-                  key={t.key}
-                  role="tab"
-                  aria-selected={mode === t.key}
-                  className={`mode-switch-btn${mode === t.key ? ' mode-switch-btn--active' : ''}`}
-                  onClick={() => switchMode(t.key)}
+                  className="calendar-btn"
+                  onClick={() => setShowCalendar(true)}
+                  aria-label={mode === 'workout' ? 'Workout calendar' : 'Routine calendar'}
                 >
-                  <span className="mode-switch-icon">{t.icon}</span>
-                  <span className="mode-switch-label">{t.label}</span>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M3 9.5h18" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
                 </button>
-              ))}
+              )}
+              <button className="settings-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
             </div>
-          )}
-          {mode && (
-            <span className="app-count">
-              {mode === 'workout'
-                ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`
-                : `${products.length} ${products.length === 1 ? 'product' : 'products'}`}
-            </span>
-          )}
+            <AuthButton user={user} onLinkGoogle={linkWithGoogle} onSignOut={handleSignOut} />
+          </div>
         </div>
-        <div className="app-header-right">
-          <button className="changelog-btn" onClick={openChangelog} aria-label="What's new">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-            </svg>
-            {changelogIsNew && <span className="changelog-dot" />}
-          </button>
-          {mode && (
-            <button
-              className="calendar-btn"
-              onClick={() => setShowCalendar(true)}
-              aria-label={mode === 'workout' ? 'Workout calendar' : 'Routine calendar'}
-            >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="2"/>
-                <path d="M3 9.5h18" stroke="currentColor" strokeWidth="2"/>
-                <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </button>
-          )}
-          <button className="settings-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          <AuthButton user={user} onLinkGoogle={linkWithGoogle} onSignOut={handleSignOut} />
-        </div>
+        {mode && (
+          <span className="app-count">
+            {mode === 'workout'
+              ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`
+              : mode === 'poop'
+              ? `${poops.length} logged`
+              : `${products.length} ${products.length === 1 ? 'product' : 'products'}`}
+          </span>
+        )}
       </header>
 
       <main className="app-main">
@@ -643,6 +680,8 @@ export default function App() {
           </div>
         ) : !mode ? (
           <WelcomeScreen onOpenSettings={() => setShowSettings(true)} />
+        ) : mode === 'poop' ? (
+          <PoopTracker poops={poops} addPoop={addPoop} deletePoop={deletePoop} />
         ) : mode === 'workout' ? (
           <WorkoutTracker
             workouts={workouts}
@@ -657,8 +696,8 @@ export default function App() {
           />
         ) : (
           <>
-            {/* ── New category form ── */}
-            {showNewCat ? (
+            {/* ── New category form — opened from the + FAB's menu ── */}
+            {showNewCat && (
               <div className="new-cat-form" ref={newCatEmojiRef}>
                 <button className="cat-emoji-btn" onClick={() => setShowNewCatEmoji(s => !s)}>
                   {newCatEmoji || '📁'}
@@ -680,62 +719,47 @@ export default function App() {
                 <button className="cat-save-btn" onClick={submitNewCategory}>Add</button>
                 <button className="cat-cancel-btn" onClick={() => setShowNewCat(false)}>✕</button>
               </div>
-            ) : (
-              <button className="new-cat-btn" onClick={() => setShowNewCat(true)}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                </svg>
-                New category
-              </button>
             )}
 
-            {/* ── New type form — global; asks which category to attach to ── */}
-            {categories.length > 0 && (
-              showNewType ? (
-                <div className="new-type-global-form" ref={newTypeEmojiRef}>
-                  <select
-                    className="field-input field-select"
-                    value={newTypeCategoryId}
-                    onChange={e => setNewTypeCategoryId(e.target.value)}
-                  >
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.emoji ? `${cat.emoji} ` : ''}{cat.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="cat-edit-form">
-                    <button className="cat-emoji-btn" onClick={() => setShowNewTypeEmoji(s => !s)}>
-                      {newTypeEmoji || '🏷️'}
-                    </button>
-                    {showNewTypeEmoji && (
-                      <EmojiPicker
-                        value={newTypeEmoji}
-                        onSelect={e => { setNewTypeEmoji(e); setShowNewTypeEmoji(false) }}
-                      />
-                    )}
-                    <input
-                      className="cat-name-input"
-                      value={newTypeName}
-                      onChange={e => setNewTypeName(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') submitNewType(); if (e.key === 'Escape') setShowNewType(false) }}
-                      placeholder="Type name..."
-                      autoFocus
+            {/* ── New type form — global, asks which category to attach to;
+                 opened from the + FAB's menu ── */}
+            {categories.length > 0 && showNewType && (
+              <div className="new-type-global-form" ref={newTypeEmojiRef}>
+                <select
+                  className="field-input field-select"
+                  value={newTypeCategoryId}
+                  onChange={e => setNewTypeCategoryId(e.target.value)}
+                >
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.emoji ? `${cat.emoji} ` : ''}{cat.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="cat-edit-form">
+                  <button className="cat-emoji-btn" onClick={() => setShowNewTypeEmoji(s => !s)}>
+                    {newTypeEmoji || '🏷️'}
+                  </button>
+                  {showNewTypeEmoji && (
+                    <EmojiPicker
+                      value={newTypeEmoji}
+                      onSelect={e => { setNewTypeEmoji(e); setShowNewTypeEmoji(false) }}
                     />
-                  </div>
-                  <div className="new-type-global-actions">
-                    <button className="cat-cancel-btn cat-cancel-btn--text" onClick={() => setShowNewType(false)}>Cancel</button>
-                    <button className="cat-save-btn" onClick={submitNewType}>Add type</button>
-                  </div>
+                  )}
+                  <input
+                    className="cat-name-input"
+                    value={newTypeName}
+                    onChange={e => setNewTypeName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') submitNewType(); if (e.key === 'Escape') setShowNewType(false) }}
+                    placeholder="Type name..."
+                    autoFocus
+                  />
                 </div>
-              ) : (
-                <button className="new-cat-btn" onClick={openNewTypeForm}>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                  </svg>
-                  Add type
-                </button>
-              )
+                <div className="new-type-global-actions">
+                  <button className="cat-cancel-btn cat-cancel-btn--text" onClick={() => setShowNewType(false)}>Cancel</button>
+                  <button className="cat-save-btn" onClick={submitNewType}>Add type</button>
+                </div>
+              </div>
             )}
 
             {/* ── Product list ── */}
@@ -887,11 +911,36 @@ export default function App() {
               <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2"/>
             </svg>
           </button>
-          <button className="fab" onClick={() => handleAddProduct()} aria-label="Add product">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-            </svg>
-          </button>
+          <div className="fab-add-wrap" ref={addMenuRef}>
+            {showAddMenu && (
+              <div className="fab-menu">
+                <button className="fab-menu-item" onClick={() => handleAddMenuSelect('category')}>
+                  <span className="fab-menu-icon">📁</span>
+                  Category
+                </button>
+                {categories.length > 0 && (
+                  <button className="fab-menu-item" onClick={() => handleAddMenuSelect('type')}>
+                    <span className="fab-menu-icon">🏷️</span>
+                    Type
+                  </button>
+                )}
+                <button className="fab-menu-item" onClick={() => handleAddMenuSelect('product')}>
+                  <span className="fab-menu-icon">🧴</span>
+                  Product
+                </button>
+              </div>
+            )}
+            <button
+              className={`fab${showAddMenu ? ' fab--active' : ''}`}
+              onClick={() => setShowAddMenu(s => !s)}
+              aria-label={showAddMenu ? 'Close add menu' : 'Add'}
+              aria-expanded={showAddMenu}
+            >
+              <svg className="fab-plus-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 

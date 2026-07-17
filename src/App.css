@@ -120,8 +120,8 @@ body {
   top: 0;
   z-index: 20;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 6px;
   padding: 16px 20px 14px;
   padding-top: calc(16px + env(safe-area-inset-top));
   border-bottom: 1px solid var(--border);
@@ -130,10 +130,19 @@ body {
   background: color-mix(in srgb, var(--bg) 90%, transparent);
 }
 
+/* Tracker switch + header buttons on one row; the item count lives below
+   as its own line (see .app-count) instead of competing with them for
+   space — that's what used to push the row to wrap on some trackers. */
+.app-header-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
 .app-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
   min-width: 0;
 }
 
@@ -142,6 +151,13 @@ body {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  /* Paired with .app-header-top's flex-wrap: on a normal line this pushes
+     the group to the far right same as space-between would; if the tracker
+     switch on the left ever needs the full row's width, this group drops
+     to its own line below instead of overlapping or squeezing anything —
+     and still ends up flush right there too, since auto margins keep
+     working on a wrapped flex line. */
+  margin-left: auto;
 }
 
 .theme-toggle {
@@ -287,12 +303,13 @@ body {
 }
 
 .app-count {
-  font-size: var(--fz-base);
+  display: block;
+  font-size: var(--fz-sm);
   color: var(--text-muted);
-  white-space: nowrap;
+  padding-left: 2px;
 }
 
-/* ── Tracker mode switch (Skincare / Workouts) ── */
+/* ── Tracker mode switch (Skincare / Workouts / Poop / …) ── */
 .mode-switch {
   display: flex;
   gap: 4px;
@@ -300,7 +317,19 @@ body {
   border: 1.5px solid var(--border);
   border-radius: 20px;
   padding: 3px;
-  flex-shrink: 0;
+  /* Shrinks (rather than pushing the right-side header buttons off-screen)
+     once there are enough trackers that it no longer fits — scrolls
+     horizontally instead of overlapping anything. Non-visible overflow is
+     what lets flexbox shrink this below its content width in the first
+     place; without it min-width:auto would keep it at full size. */
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mode-switch::-webkit-scrollbar {
+  display: none;
 }
 
 .mode-switch-btn {
@@ -316,6 +345,7 @@ body {
   border-radius: 16px;
   padding: 6px 12px;
   cursor: pointer;
+  flex-shrink: 0;
   min-height: 32px;
   white-space: nowrap;
   transition: color 0.15s, background 0.15s;
@@ -333,18 +363,6 @@ body {
   line-height: 1;
 }
 
-@media (max-width: 480px) {
-  /* Icons carry the meaning on narrow screens; labels would overflow */
-  .mode-switch-label {
-    display: none;
-  }
-  .mode-switch-btn {
-    padding: 6px 10px;
-  }
-  .app-count {
-    display: none;
-  }
-}
 
 /* ── Main ── */
 .app-main {
@@ -872,6 +890,74 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   box-shadow: 0 2px 8px var(--primary-shadow);
 }
 
+/* ── + FAB add-menu (Category / Type / Product) ── */
+.fab-add-wrap {
+  position: relative;
+}
+
+.fab-plus-icon {
+  transition: transform 0.2s ease;
+}
+
+.fab--active .fab-plus-icon {
+  transform: rotate(45deg);
+}
+
+.fab-menu {
+  position: absolute;
+  bottom: 86px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  padding: 7px 16px 7px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  transform-origin: bottom right;
+  animation: fab-menu-grow 0.18s ease both;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fab-menu-item:nth-child(1) { animation-delay: 0.04s; }
+.fab-menu-item:nth-child(2) { animation-delay: 0.08s; }
+.fab-menu-item:nth-child(3) { animation-delay: 0.12s; }
+
+.fab-menu-item:active {
+  opacity: 0.7;
+}
+
+.fab-menu-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+@keyframes fab-menu-grow {
+  from { opacity: 0; transform: scale(0.4) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 /* ── Toast ── */
 .toast {
   position: fixed;
@@ -1181,62 +1267,62 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   font-weight: 600;
 }
 
-/* ── Changelog button ── */
-.changelog-btn {
-  position: relative;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
+/* ── Header icon group — changelog / calendar / settings, grouped into one
+   pill so their order and position hold steady across every tracker (same
+   visual treatment as .mode-switch on the other side of the header) ── */
+.header-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg);
   border: 1.5px solid var(--border);
-  background: var(--surface);
+  border-radius: 20px;
+  padding: 3px;
+  flex-shrink: 0;
+}
+
+.changelog-btn,
+.calendar-btn,
+.settings-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
   color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
 
-.changelog-btn:hover {
+.changelog-btn:hover,
+.calendar-btn:hover,
+.settings-btn:hover {
   color: var(--primary);
-  border-color: var(--primary);
+  background: var(--surface);
 }
 
-.changelog-btn:active {
+.changelog-btn:active,
+.calendar-btn:active,
+.settings-btn:active {
   opacity: 0.7;
 }
 
 .changelog-dot {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 3px;
+  right: 3px;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--primary);
-  border: 2px solid var(--surface);
+  border: 2px solid var(--bg);
 }
-
-.calendar-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.calendar-btn:hover  { color: var(--primary); border-color: var(--primary); }
-.calendar-btn:active { opacity: 0.7; }
 
 /* ── Modal ── */
 .modal-backdrop {
@@ -1740,26 +1826,6 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 [data-theme="dark"][data-accent="sky"]      { --primary: #6aaad8; --primary-light: #0c1c28; --primary-shadow: rgba(106,170,216,0.45); }
 [data-theme="dark"][data-accent="lavender"] { --primary: #a898e0; --primary-light: #16102a; --primary-shadow: rgba(168,152,224,0.45); }
 
-/* ── Settings button (matches changelog-btn style) ── */
-.settings-btn {
-  position: relative;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.settings-btn:hover  { color: var(--primary); border-color: var(--primary); }
-.settings-btn:active { opacity: 0.7; }
-
 /* ── Settings panel sections ── */
 .settings-section {
   display: flex;
@@ -1991,6 +2057,36 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 
 .cal-cell--selected .cal-dot {
   background: #fff;
+}
+
+.poop-dot {
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  line-height: 1;
+  transition: font-size 0.15s;
+}
+
+/* The more logged that day, the bigger (and wobblier) it gets */
+.poop-dot--2 {
+  font-size: 12px;
+}
+
+.poop-dot--3 {
+  font-size: 15px;
+  animation: poop-wiggle 0.7s ease-in-out infinite;
+}
+
+.poop-dot--4 {
+  font-size: 19px;
+  animation: poop-wiggle 0.45s ease-in-out infinite;
+}
+
+@keyframes poop-wiggle {
+  0%, 100% { transform: translateX(-50%) rotate(-12deg); }
+  50%      { transform: translateX(-50%) rotate(12deg); }
 }
 
 .cal-day-section {
