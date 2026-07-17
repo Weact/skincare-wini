@@ -38,7 +38,9 @@ import { useEvents } from './hooks/useEvents'
 import { useWorkouts } from './hooks/useWorkouts'
 import { useSteps } from './hooks/useSteps'
 import { usePoops } from './hooks/usePoops'
+import { useProfile } from './hooks/useProfile'
 import WelcomeScreen from './components/WelcomeScreen'
+import SharedProfileView from './components/SharedProfileView'
 import { resizeImage } from './utils/imageUtils'
 import { getProductStatus } from './utils/dateUtils'
 import { LATEST_VERSION } from './changelog'
@@ -162,6 +164,8 @@ export default function App() {
   const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts(user?.uid)
   const { steps, logSteps } = useSteps(user?.uid)
   const { poops, addPoop, deletePoop, reorderPoops } = usePoops(user?.uid)
+  const { profile, setVisibility, addAllowedViewer, removeAllowedViewer } = useProfile(user?.uid)
+  const [viewingProfileCode, setViewingProfileCode] = useState(null)
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarTarget, setCalendarTarget] = useState(null)
   const [workoutCalendarTarget, setWorkoutCalendarTarget] = useState(null)
@@ -182,6 +186,7 @@ export default function App() {
 
   function switchMode(next) {
     setMode(next)
+    setViewingProfileCode(null)
     if (next) localStorage.setItem('trackerMode', next)
     else localStorage.removeItem('trackerMode')
   }
@@ -680,7 +685,7 @@ export default function App() {
                 </svg>
                 {changelogIsNew && <span className="changelog-dot" />}
               </button>
-              {mode && mode !== 'poop' && (
+              {mode && mode !== 'poop' && !viewingProfileCode && (
                 <button
                   className="calendar-btn"
                   onClick={() => setShowCalendar(true)}
@@ -719,6 +724,8 @@ export default function App() {
           <div className="app-loading">
             <div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" />
           </div>
+        ) : viewingProfileCode ? (
+          <SharedProfileView code={viewingProfileCode} onExit={() => setViewingProfileCode(null)} />
         ) : !mode ? (
           <WelcomeScreen onOpenSettings={() => setShowSettings(true)} />
         ) : mode === 'poop' ? (
@@ -737,6 +744,53 @@ export default function App() {
           />
         ) : (
           <>
+            {!selectMode && (
+              <div className="skincare-add-bar">
+                <div className="fab-add-wrap" ref={addMenuRef}>
+                  <button
+                    type="button"
+                    className={`skincare-add-btn${showAddMenu ? ' skincare-add-btn--active' : ''}`}
+                    onClick={() => setShowAddMenu(s => !s)}
+                    aria-label={showAddMenu ? 'Close add menu' : 'Add'}
+                    aria-expanded={showAddMenu}
+                  >
+                    <svg className="fab-plus-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+                    </svg>
+                    Add
+                  </button>
+                  {showAddMenu && (
+                    <div className="fab-menu fab-menu--dropdown">
+                      <button className="fab-menu-item" onClick={() => handleAddMenuSelect('category')}>
+                        <span className="fab-menu-icon">📁</span>
+                        Category
+                      </button>
+                      {categories.length > 0 && (
+                        <button className="fab-menu-item" onClick={() => handleAddMenuSelect('type')}>
+                          <span className="fab-menu-icon">🏷️</span>
+                          Type
+                        </button>
+                      )}
+                      <button className="fab-menu-item" onClick={() => handleAddMenuSelect('product')}>
+                        <span className="fab-menu-icon">🧴</span>
+                        Product
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <button
+                  className="fab fab--secondary"
+                  onClick={() => photoInputRef.current.click()}
+                  aria-label="Add product with photo"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </button>
+              </div>
+            )}
+
             <SelectionBar
               selectMode={selectMode}
               count={selectedProductIds.size}
@@ -963,47 +1017,6 @@ export default function App() {
         )}
       </main>
 
-      {mode === 'skincare' && !selectMode && (
-        <div className="fab-group">
-          <button className="fab fab--secondary" onClick={() => photoInputRef.current.click()} aria-label="Add product with photo">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2"/>
-            </svg>
-          </button>
-          <div className="fab-add-wrap" ref={addMenuRef}>
-            {showAddMenu && (
-              <div className="fab-menu">
-                <button className="fab-menu-item" onClick={() => handleAddMenuSelect('category')}>
-                  <span className="fab-menu-icon">📁</span>
-                  Category
-                </button>
-                {categories.length > 0 && (
-                  <button className="fab-menu-item" onClick={() => handleAddMenuSelect('type')}>
-                    <span className="fab-menu-icon">🏷️</span>
-                    Type
-                  </button>
-                )}
-                <button className="fab-menu-item" onClick={() => handleAddMenuSelect('product')}>
-                  <span className="fab-menu-icon">🧴</span>
-                  Product
-                </button>
-              </div>
-            )}
-            <button
-              className={`fab${showAddMenu ? ' fab--active' : ''}`}
-              onClick={() => setShowAddMenu(s => !s)}
-              aria-label={showAddMenu ? 'Close add menu' : 'Add'}
-              aria-expanded={showAddMenu}
-            >
-              <svg className="fab-plus-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
       <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFAB} />
 
       {showChangelog && (
@@ -1017,7 +1030,17 @@ export default function App() {
         />
       )}
       {showSettings && (
-        <SettingsPanel settings={settings} onUpdate={updateSetting} onClose={() => setShowSettings(false)} />
+        <SettingsPanel
+          settings={settings}
+          onUpdate={updateSetting}
+          onClose={() => setShowSettings(false)}
+          user={user}
+          profile={profile}
+          onSetVisibility={setVisibility}
+          onAddViewer={addAllowedViewer}
+          onRemoveViewer={removeAllowedViewer}
+          onViewProfile={code => { setViewingProfileCode(code); setShowSettings(false) }}
+        />
       )}
       {showCalendar && (mode === 'workout' ? (
         <WorkoutCalendarModal

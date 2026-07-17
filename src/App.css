@@ -110,8 +110,7 @@ body {
   flex-direction: column;
   max-width: 600px;
   margin: 0 auto;
-  /* Space for FAB */
-  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* ── Header ── */
@@ -367,10 +366,7 @@ body {
 /* ── Main ── */
 .app-main {
   flex: 1;
-  /* Bottom padding clears the floating FAB cluster (2 x 60px buttons + gap +
-     28px offset) so short content — e.g. an empty type — never ends up with
-     its last controls crowded against/under the FABs */
-  padding: 16px 16px calc(200px + env(safe-area-inset-bottom));
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
 }
 
 /* ── Empty state ── */
@@ -957,21 +953,79 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   margin-top: 0;
 }
 
-/* ── FAB group ── */
-.fab-group {
-  position: fixed;
-  bottom: calc(28px + env(safe-area-inset-bottom));
-  right: 24px;
+/* ── Shared profile (read-only view of someone else's data) ── */
+.shared-profile-header {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  z-index: 50;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.shared-profile-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── Skincare "Add" bar — large horizontal button + secondary photo FAB,
+   at the top of the list (used to be a floating bottom-right FAB group) ── */
+.skincare-add-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.fab-add-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.skincare-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1.5px dashed var(--border-input);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  min-height: 48px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.skincare-add-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.skincare-add-btn--active {
+  border-style: solid;
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.fab-plus-icon {
+  transition: transform 0.2s ease;
+}
+
+.skincare-add-btn--active .fab-plus-icon {
+  transform: rotate(45deg);
 }
 
 .fab {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: var(--primary);
   border: none;
@@ -980,13 +1034,12 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .fab--secondary {
-  width: 50px;
-  height: 50px;
   background: var(--surface);
   border: 1.5px solid var(--border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -998,52 +1051,41 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   box-shadow: 0 2px 8px var(--primary-shadow);
 }
 
-/* ── + FAB add-menu (Category / Type / Product) ── */
-.fab-add-wrap {
-  position: relative;
-}
-
-.fab-plus-icon {
-  transition: transform 0.2s ease;
-}
-
-.fab--active .fab-plus-icon {
-  transform: rotate(45deg);
-}
-
+/* Grows downward below the bar, full width, instead of the small floating
+   pills the old bottom-anchored FAB used */
 .fab-menu {
   position: absolute;
-  bottom: 86px;
+  top: calc(100% + 8px);
+  left: 0;
   right: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+  gap: 6px;
+  z-index: 5;
 }
 
 .fab-menu-item {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   font-size: 14px;
   font-family: inherit;
   font-weight: 600;
   color: var(--text);
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: 24px;
-  padding: 7px 16px 7px 7px;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
   cursor: pointer;
-  white-space: nowrap;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-  transform-origin: bottom right;
-  animation: fab-menu-grow 0.18s ease both;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  transform-origin: top center;
+  animation: fab-menu-grow 0.16s ease both;
   -webkit-tap-highlight-color: transparent;
 }
 
-.fab-menu-item:nth-child(1) { animation-delay: 0.04s; }
-.fab-menu-item:nth-child(2) { animation-delay: 0.08s; }
-.fab-menu-item:nth-child(3) { animation-delay: 0.12s; }
+.fab-menu-item:nth-child(1) { animation-delay: 0.03s; }
+.fab-menu-item:nth-child(2) { animation-delay: 0.06s; }
+.fab-menu-item:nth-child(3) { animation-delay: 0.09s; }
 
 .fab-menu-item:active {
   opacity: 0.7;
@@ -1062,7 +1104,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 @keyframes fab-menu-grow {
-  from { opacity: 0; transform: scale(0.4) translateY(10px); }
+  from { opacity: 0; transform: scale(0.94) translateY(-6px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -2678,6 +2720,75 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   opacity: 0.75;
 }
 
+/* ── Profile sharing (Settings) ── */
+.profile-code-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-code {
+  flex: 1;
+  font-family: 'SF Mono', 'Courier New', monospace;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-align: center;
+  color: var(--primary);
+  background: var(--primary-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+}
+
+.profile-view-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-view-row .field-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* User-ID variant — long and lowercase-mixed, unlike the short share code,
+   so it gets a smaller size, no letter-spacing, and a scrollable single line
+   instead of trying to make it look like a memorable code */
+.profile-code--id {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.whitelist-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.whitelist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg);
+  border-radius: var(--radius-xs);
+  padding: 8px 10px;
+}
+
+.whitelist-item-id {
+  font-family: 'SF Mono', 'Courier New', monospace;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
 /* Steps quick-logger */
 .wk-steps-row {
   display: flex;
@@ -2984,10 +3095,6 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   }
 
   .app-main {
-    padding: 20px 28px calc(200px + env(safe-area-inset-bottom));
-  }
-
-  .fab-group {
-    right: calc(max(24px, (100vw - 600px) / 2 + 24px));
+    padding: 20px 28px calc(20px + env(safe-area-inset-bottom));
   }
 }

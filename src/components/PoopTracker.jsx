@@ -92,7 +92,7 @@ function SortablePoopEntry({ p, feeling, confirmDeleteId, onDeleteClick }) {
 
 // Poop tracker's entire view IS the calendar — no journal list alongside it
 // like the other trackers. Tap a day to see, add, or remove its entries.
-export default function PoopTracker({ poops, addPoop, deletePoop, reorderPoops }) {
+export default function PoopTracker({ poops, addPoop, deletePoop, reorderPoops, readOnly = false }) {
   const today = todayISO()
   const now = new Date()
   const [viewYear, setViewYear] = useState(now.getFullYear())
@@ -247,12 +247,14 @@ export default function PoopTracker({ poops, addPoop, deletePoop, reorderPoops }
 
   return (
     <div className="poop-tracker">
-      <SelectionBar
-        selectMode={selectMode}
-        count={selectedIds.size}
-        onToggle={toggleSelectMode}
-        onDeleteClick={() => setShowDeleteConfirm(true)}
-      />
+      {!readOnly && (
+        <SelectionBar
+          selectMode={selectMode}
+          count={selectedIds.size}
+          onToggle={toggleSelectMode}
+          onDeleteClick={() => setShowDeleteConfirm(true)}
+        />
+      )}
 
       {monthAverage !== null && (
         <div className="wk-summary-row poop-summary-row">
@@ -335,13 +337,15 @@ export default function PoopTracker({ poops, addPoop, deletePoop, reorderPoops }
                   </button>
                 )
               })}
-              <button
-                type="button"
-                className={`cal-sort-btn${sortBy === 'custom' ? ' cal-sort-btn--active' : ''}`}
-                onClick={() => handleSortClick('custom')}
-              >
-                Custom
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  className={`cal-sort-btn${sortBy === 'custom' ? ' cal-sort-btn--active' : ''}`}
+                  onClick={() => handleSortClick('custom')}
+                >
+                  Custom
+                </button>
+              )}
               {(sortBy !== 'time' || sortDir !== 'asc') && (
                 <button
                   type="button"
@@ -357,7 +361,7 @@ export default function PoopTracker({ poops, addPoop, deletePoop, reorderPoops }
 
         {dayEntries.length === 0 ? (
           <p className="cal-empty">Nothing logged</p>
-        ) : sortBy === 'custom' && !selectMode ? (
+        ) : sortBy === 'custom' && !selectMode && !readOnly ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={dayEntries.map(p => p.id)} strategy={verticalListSortingStrategy}>
               <ul className="cal-event-list">
@@ -397,7 +401,7 @@ export default function PoopTracker({ poops, addPoop, deletePoop, reorderPoops }
                     <span className="cal-event-name">{formatEventTime(p.time) || 'Logged'}</span>
                     {feeling && <span className="cal-event-meta">{feeling.label}</span>}
                   </div>
-                  {!selectMode && (
+                  {!selectMode && !readOnly && (
                     <button
                       type="button"
                       className={`cal-event-delete${confirmDeleteId === p.id ? ' cal-event-delete--confirm' : ''}`}
@@ -413,7 +417,7 @@ export default function PoopTracker({ poops, addPoop, deletePoop, reorderPoops }
           </ul>
         )}
 
-        {!selectMode && (pickingFeeling ? (
+        {!readOnly && !selectMode && (pickingFeeling ? (
           <div className="field">
             <label className="field-label">How did it feel?</label>
             <div className="cal-tod-row">

@@ -22,10 +22,43 @@ const FONT_SIZES = [
   { key: 'lg', label: 'Large',  previewSize: '22px' },
 ]
 
-export default function SettingsPanel({ settings, onUpdate, onClose }) {
+export default function SettingsPanel({ settings, onUpdate, onClose, user, profile, onSetVisibility, onAddViewer, onRemoveViewer, onViewProfile }) {
   // Body weight for the workout calorie estimate — device-local, same key
   // WorkoutForm reads (and first asks for) when estimating
   const [weight, setWeight] = useState(() => localStorage.getItem('bodyWeightKg') || '')
+  const [codeInput, setCodeInput] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [idCopied, setIdCopied] = useState(false)
+  const [viewerIdInput, setViewerIdInput] = useState('')
+
+  const visibility = profile?.profileVisibility || 'private'
+
+  function handleCopyCode() {
+    if (!profile?.profileCode) return
+    navigator.clipboard?.writeText(profile.profileCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function handleCopyId() {
+    if (!user?.uid) return
+    navigator.clipboard?.writeText(user.uid)
+    setIdCopied(true)
+    setTimeout(() => setIdCopied(false), 2000)
+  }
+
+  function handleAddViewer() {
+    const id = viewerIdInput.trim()
+    if (!id) return
+    onAddViewer(id)
+    setViewerIdInput('')
+  }
+
+  function handleViewSubmit() {
+    const code = codeInput.trim()
+    if (!code) return
+    onViewProfile(code)
+  }
 
   function handleWeightChange(e) {
     const val = e.target.value
@@ -160,6 +193,127 @@ export default function SettingsPanel({ settings, onUpdate, onClose }) {
               ))}
             </div>
           </div>
+
+          {/* ── Profile sharing — locked to non-anonymous accounts, both to
+              offer a code and to look one up, so a throwaway session can't
+              use it at all ── */}
+          {user && !user.isAnonymous && (
+            <div className="settings-section">
+              <div className="settings-section-title">Profile sharing</div>
+              <div className="field-hint">
+                Share a read-only view of your Workouts and Poop tracker. Your Skincare routine and calendars always stay private.
+              </div>
+              <div className="settings-seg">
+                <button
+                  className={`settings-seg-btn${visibility === 'private' ? ' settings-seg-btn--active' : ''}`}
+                  onClick={() => onSetVisibility('private')}
+                >
+                  Private
+                </button>
+                <button
+                  className={`settings-seg-btn${visibility === 'public' ? ' settings-seg-btn--active' : ''}`}
+                  onClick={() => onSetVisibility('public')}
+                >
+                  Public
+                </button>
+                <button
+                  className={`settings-seg-btn${visibility === 'whitelist' ? ' settings-seg-btn--active' : ''}`}
+                  onClick={() => onSetVisibility('whitelist')}
+                >
+                  Whitelist
+                </button>
+              </div>
+
+              {visibility !== 'private' && profile?.profileCode && (
+                <div className="profile-code-row">
+                  <span className="profile-code">{profile.profileCode}</span>
+                  <button type="button" className="cat-save-btn" onClick={handleCopyCode}>
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              )}
+
+              {visibility === 'whitelist' && (
+                <div className="field">
+                  <label className="field-label">Allowed viewers</label>
+                  <div className="field-hint">
+                    Only these user IDs can view your shared profile — ask them for their ID below.
+                  </div>
+                  {profile?.allowedViewerUids?.length > 0 && (
+                    <ul className="whitelist-list">
+                      {profile.allowedViewerUids.map(id => (
+                        <li key={id} className="whitelist-item">
+                          <span className="whitelist-item-id">{id}</span>
+                          <button
+                            type="button"
+                            className="type-current-remove"
+                            onClick={() => onRemoveViewer(id)}
+                            aria-label="Remove viewer"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="profile-view-row">
+                    <input
+                      type="text"
+                      className="field-input"
+                      value={viewerIdInput}
+                      onChange={e => setViewerIdInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleAddViewer() }}
+                      placeholder="Paste their user ID"
+                    />
+                    <button
+                      type="button"
+                      className="wk-auto-btn"
+                      onClick={handleAddViewer}
+                      disabled={!viewerIdInput.trim()}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="field">
+                <label className="field-label">Your user ID</label>
+                <div className="field-hint">
+                  Give this to someone so they can add you to their whitelist
+                </div>
+                <div className="profile-view-row">
+                  <span className="profile-code profile-code--id">{user.uid}</span>
+                  <button type="button" className="cat-save-btn" onClick={handleCopyId}>
+                    {idCopied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="field">
+                <label className="field-label">View a shared profile</label>
+                <div className="profile-view-row">
+                  <input
+                    type="text"
+                    className="field-input"
+                    value={codeInput}
+                    onChange={e => setCodeInput(e.target.value.toUpperCase())}
+                    onKeyDown={e => { if (e.key === 'Enter') handleViewSubmit() }}
+                    placeholder="Enter a code"
+                    maxLength={7}
+                  />
+                  <button
+                    type="button"
+                    className="wk-auto-btn"
+                    onClick={handleViewSubmit}
+                    disabled={!codeInput.trim()}
+                  >
+                    View
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Workout ── */}
           <div className="settings-section">

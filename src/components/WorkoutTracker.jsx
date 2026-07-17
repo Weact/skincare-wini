@@ -38,7 +38,7 @@ function groupByDay(list) {
   return byDate
 }
 
-function DayGroup({ date, workouts, today, highlightWeek, stepsCount, updateWorkout, deleteWorkout, onOpenCalendar, selectMode, selectedIds, onToggleSelect }) {
+function DayGroup({ date, workouts, today, highlightWeek, stepsCount, updateWorkout, deleteWorkout, onOpenCalendar, selectMode, selectedIds, onToggleSelect, readOnly }) {
   return (
     <div className="wk-day-group">
       <div className="cal-day-heading wk-day-heading">
@@ -59,6 +59,7 @@ function DayGroup({ date, workouts, today, highlightWeek, stepsCount, updateWork
               selectMode={selectMode}
               selected={selectedIds?.has(w.id)}
               onToggleSelect={() => onToggleSelect(w.id)}
+              readOnly={readOnly}
             />
           </li>
         ))}
@@ -70,7 +71,7 @@ function DayGroup({ date, workouts, today, highlightWeek, stepsCount, updateWork
 // Collapsible month bucket in the past-workouts journal — rendered only for
 // months that actually contain workouts. The current month starts expanded;
 // older ones start collapsed.
-function MonthSection({ monthKey, dates, byDate, today, startOpen, stepsByDate, highlightUntil, updateWorkout, deleteWorkout, onOpenCalendar, selectMode, selectedIds, onToggleSelect }) {
+function MonthSection({ monthKey, dates, byDate, today, startOpen, stepsByDate, highlightUntil, updateWorkout, deleteWorkout, onOpenCalendar, selectMode, selectedIds, onToggleSelect, readOnly }) {
   const [collapsed, setCollapsed] = useState(!startOpen)
   const count = dates.reduce((sum, d) => sum + byDate[d].length, 0)
   const [year, month] = [parseInt(monthKey.slice(0, 4)), parseInt(monthKey.slice(5)) - 1]
@@ -100,6 +101,7 @@ function MonthSection({ monthKey, dates, byDate, today, startOpen, stepsByDate, 
           selectMode={selectMode}
           selectedIds={selectedIds}
           onToggleSelect={onToggleSelect}
+          readOnly={readOnly}
         />
       ))}
     </div>
@@ -108,7 +110,7 @@ function MonthSection({ monthKey, dates, byDate, today, startOpen, stepsByDate, 
 
 // Main view of workout mode — upcoming (scheduled) workouts on top with the
 // current week highlighted, then the past journal under collapsible months.
-export default function WorkoutTracker({ workouts, steps = [], logSteps, addWorkout, updateWorkout, deleteWorkout, onLogged, onStepsLogged, onOpenCalendar }) {
+export default function WorkoutTracker({ workouts, steps = [], logSteps, addWorkout, updateWorkout, deleteWorkout, onLogged, onStepsLogged, onOpenCalendar, readOnly = false }) {
   const [showForm, setShowForm] = useState(false)
   const [sortBy, setSortBy] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
@@ -259,12 +261,14 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
 
   return (
     <>
-      <SelectionBar
-        selectMode={selectMode}
-        count={selectedIds.size}
-        onToggle={toggleSelectMode}
-        onDeleteClick={() => setShowDeleteConfirm(true)}
-      />
+      {!readOnly && (
+        <SelectionBar
+          selectMode={selectMode}
+          count={selectedIds.size}
+          onToggle={toggleSelectMode}
+          onDeleteClick={() => setShowDeleteConfirm(true)}
+        />
+      )}
 
       {(week.count > 0 || month.count > 0 || week.steps > 0 || month.steps > 0) && (
         <div className="wk-summary-row">
@@ -285,25 +289,27 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
         </div>
       )}
 
-      <div className="wk-steps-row">
-        <span className="wk-steps-label">👟 Steps</span>
-        <div className="wk-steps-date">
-          <DateInput value={stepsDate} onChange={e => setStepsDate(e.target.value || today)} max={today} />
+      {!readOnly && (
+        <div className="wk-steps-row">
+          <span className="wk-steps-label">👟 Steps</span>
+          <div className="wk-steps-date">
+            <DateInput value={stepsDate} onChange={e => setStepsDate(e.target.value || today)} max={today} />
+          </div>
+          <input
+            type="number"
+            min="0"
+            className="field-input wk-steps-input"
+            value={stepsDraft}
+            onChange={e => setStepsDraft(e.target.value)}
+            placeholder="8000"
+          />
+          <button type="button" className="cat-save-btn" onClick={saveSteps}>
+            Save
+          </button>
         </div>
-        <input
-          type="number"
-          min="0"
-          className="field-input wk-steps-input"
-          value={stepsDraft}
-          onChange={e => setStepsDraft(e.target.value)}
-          placeholder="8000"
-        />
-        <button type="button" className="cat-save-btn" onClick={saveSteps}>
-          Save
-        </button>
-      </div>
+      )}
 
-      {!selectMode && (showForm ? (
+      {!readOnly && !selectMode && (showForm ? (
         <div className="wk-form-panel">
           <WorkoutForm onSubmit={handleAdd} onCancel={() => setShowForm(false)} />
         </div>
@@ -353,7 +359,9 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
         <div className="empty-state">
           <div className="empty-icon">🏋️</div>
           <p className="empty-title">No workouts yet</p>
-          <p className="empty-text">Log your first workout to start your training journal</p>
+          <p className="empty-text">
+            {readOnly ? 'Nothing logged yet' : 'Log your first workout to start your training journal'}
+          </p>
         </div>
       ) : flatSorted ? (
         <ul className="wk-day-list wk-flat-list">
@@ -368,6 +376,7 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
                 selectMode={selectMode}
                 selected={selectedIds.has(w.id)}
                 onToggleSelect={() => toggleSelected(w.id)}
+                readOnly={readOnly}
               />
             </li>
           ))}
@@ -393,6 +402,7 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
                   selectMode={selectMode}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelected}
+                  readOnly={readOnly}
                 />
               ))}
             </div>
@@ -417,6 +427,7 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
               selectMode={selectMode}
               selectedIds={selectedIds}
               onToggleSelect={toggleSelected}
+              readOnly={readOnly}
             />
           ))}
         </>

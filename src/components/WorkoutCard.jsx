@@ -6,7 +6,7 @@ import WorkoutForm from './WorkoutForm'
 // One journal entry — reuses the product card look (collapsible header +
 // body). Expanded body shows the exercises and notes; Edit swaps the body
 // for the shared WorkoutForm in place.
-export default function WorkoutCard({ workout, highlight = false, showDate = false, onUpdate, onDelete, onOpenCalendar, selectMode = false, selected = false, onToggleSelect }) {
+export default function WorkoutCard({ workout, highlight = false, showDate = false, onUpdate, onDelete, onOpenCalendar, selectMode = false, selected = false, onToggleSelect, readOnly = false }) {
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -89,30 +89,32 @@ export default function WorkoutCard({ workout, highlight = false, showDate = fal
             />
           ) : (
             <>
-              <div className="field">
-                <label className="field-label">In calendar</label>
-                <button
-                  type="button"
-                  className="linked-date"
-                  onClick={() => onOpenCalendar?.(workout)}
-                >
-                  <span className="linked-date-emoji">📅</span>
-                  <div className="linked-date-info">
-                    <span className="linked-date-name">
-                      {formatDisplayDate(workout.date)}
-                    </span>
-                    <span className="linked-date-meta">
-                      {[
-                        workout.time ? formatEventTime(workout.time) : null,
-                        'Open in workout calendar',
-                      ].filter(Boolean).join(' · ')}
-                    </span>
-                  </div>
-                  <svg width="7" height="12" viewBox="0 0 7 12" fill="none" className="linked-date-chevron">
-                    <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </div>
+              {!readOnly && (
+                <div className="field">
+                  <label className="field-label">In calendar</label>
+                  <button
+                    type="button"
+                    className="linked-date"
+                    onClick={() => onOpenCalendar?.(workout)}
+                  >
+                    <span className="linked-date-emoji">📅</span>
+                    <div className="linked-date-info">
+                      <span className="linked-date-name">
+                        {formatDisplayDate(workout.date)}
+                      </span>
+                      <span className="linked-date-meta">
+                        {[
+                          workout.time ? formatEventTime(workout.time) : null,
+                          'Open in workout calendar',
+                        ].filter(Boolean).join(' · ')}
+                      </span>
+                    </div>
+                    <svg width="7" height="12" viewBox="0 0 7 12" fill="none" className="linked-date-chevron">
+                      <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
 
               {workout.exercises?.length > 0 && (
                 <div className="field">
@@ -138,17 +140,19 @@ export default function WorkoutCard({ workout, highlight = false, showDate = fal
                 </div>
               )}
 
-              <div className="wk-card-actions">
-                <button className="photo-btn" onClick={() => setEditing(true)}>
-                  Edit
-                </button>
-                <button
-                  className={`delete-btn ${confirmDelete ? 'delete-btn--confirm' : ''}`}
-                  onClick={handleDeleteClick}
-                >
-                  {confirmDelete ? 'Tap again to delete' : 'Delete workout'}
-                </button>
-              </div>
+              {!readOnly && (
+                <div className="wk-card-actions">
+                  <button className="photo-btn" onClick={() => setEditing(true)}>
+                    Edit
+                  </button>
+                  <button
+                    className={`delete-btn ${confirmDelete ? 'delete-btn--confirm' : ''}`}
+                    onClick={handleDeleteClick}
+                  >
+                    {confirmDelete ? 'Tap again to delete' : 'Delete workout'}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
