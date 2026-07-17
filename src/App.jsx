@@ -28,6 +28,8 @@ import WorkoutTracker from './components/WorkoutTracker'
 import PoopTracker from './components/PoopTracker'
 import Toast from './components/Toast'
 import EmojiPicker from './components/EmojiPicker'
+import SelectionBar from './components/SelectionBar'
+import DeleteConfirmModal from './components/DeleteConfirmModal'
 import { useAuth } from './hooks/useAuth'
 import { useProducts } from './hooks/useProducts'
 import { useCategories } from './hooks/useCategories'
@@ -159,7 +161,7 @@ export default function App() {
   const { events, addEvent, updateEvent, deleteEvent } = useEvents(user?.uid)
   const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts(user?.uid)
   const { steps, logSteps } = useSteps(user?.uid)
-  const { poops, addPoop, deletePoop } = usePoops(user?.uid)
+  const { poops, addPoop, deletePoop, reorderPoops } = usePoops(user?.uid)
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarTarget, setCalendarTarget] = useState(null)
   const [workoutCalendarTarget, setWorkoutCalendarTarget] = useState(null)
@@ -214,6 +216,37 @@ export default function App() {
       else next.add(id)
       return next
     })
+  }
+
+  // Bulk-select mode for the product list (Select / Delete N)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedProductIds, setSelectedProductIds] = useState(() => new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  function toggleSelectMode() {
+    setSelectMode(s => !s)
+    setSelectedProductIds(new Set())
+    // Entering select mode while a new-category/new-type form (or the +
+    // menu) is open would leave them stacked awkwardly above the list
+    setShowNewCat(false)
+    setShowNewType(false)
+    setShowAddMenu(false)
+  }
+
+  function toggleProductSelect(id) {
+    setSelectedProductIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function confirmBulkDeleteProducts() {
+    await Promise.all([...selectedProductIds].map(id => handleDeleteProduct(id)))
+    setSelectedProductIds(new Set())
+    setSelectMode(false)
+    setShowDeleteConfirm(false)
   }
 
   const [activeId, setActiveId] = useState(null)
@@ -603,6 +636,14 @@ export default function App() {
   const categoryIds = displayCategories.map(c => `cat-${c.id}`)
   const uncategorized = grouped.__none || []
 
+  const selectedProductItems = products
+    .filter(p => selectedProductIds.has(p.id))
+    .map(p => ({
+      id: p.id,
+      label: p.name || 'Unnamed product',
+      sublabel: getProductStatus(p).label,
+    }))
+
   return (
     <div className="app">
       <header className="app-header">
@@ -681,7 +722,7 @@ export default function App() {
         ) : !mode ? (
           <WelcomeScreen onOpenSettings={() => setShowSettings(true)} />
         ) : mode === 'poop' ? (
-          <PoopTracker poops={poops} addPoop={addPoop} deletePoop={deletePoop} />
+          <PoopTracker poops={poops} addPoop={addPoop} deletePoop={deletePoop} reorderPoops={reorderPoops} />
         ) : mode === 'workout' ? (
           <WorkoutTracker
             workouts={workouts}
@@ -696,6 +737,13 @@ export default function App() {
           />
         ) : (
           <>
+            <SelectionBar
+              selectMode={selectMode}
+              count={selectedProductIds.size}
+              onToggle={toggleSelectMode}
+              onDeleteClick={() => setShowDeleteConfirm(true)}
+            />
+
             {/* ── New category form — opened from the + FAB's menu ── */}
             {showNewCat && (
               <div className="new-cat-form" ref={newCatEmojiRef}>
@@ -787,6 +835,9 @@ export default function App() {
                         onCreateType={handleCreateType}
                         events={events}
                         onOpenEvent={handleOpenEvent}
+                        selectMode={selectMode}
+                        selected={selectedProductIds.has(product.id)}
+                        onToggleSelect={() => toggleProductSelect(product.id)}
                       />
                     </li>
                   ))}
@@ -821,6 +872,9 @@ export default function App() {
                       newProductId={newProductId}
                       expandedIds={expandedIds}
                       onToggleExpanded={toggleExpanded}
+                      selectMode={selectMode}
+                      selectedIds={selectedProductIds}
+                      onToggleSelect={toggleProductSelect}
                     />
                   ))}
                 </SortableContext>
@@ -841,6 +895,9 @@ export default function App() {
                     newProductId={newProductId}
                     expandedIds={expandedIds}
                     onToggleExpanded={toggleExpanded}
+                    selectMode={selectMode}
+                    selectedIds={selectedProductIds}
+                    onToggleSelect={toggleProductSelect}
                   />
                 )}
 
@@ -897,13 +954,16 @@ export default function App() {
                 newProductId={newProductId}
                 expandedIds={expandedIds}
                 onToggleExpanded={toggleExpanded}
+                selectMode={selectMode}
+                selectedIds={selectedProductIds}
+                onToggleSelect={toggleProductSelect}
               />
             )}
           </>
         )}
       </main>
 
-      {mode === 'skincare' && (
+      {mode === 'skincare' && !selectMode && (
         <div className="fab-group">
           <button className="fab fab--secondary" onClick={() => photoInputRef.current.click()} aria-label="Add product with photo">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -948,6 +1008,13 @@ export default function App() {
 
       {showChangelog && (
         <ChangelogModal onClose={() => setShowChangelog(false)} />
+      )}
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          items={selectedProductItems}
+          onConfirm={confirmBulkDeleteProducts}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
       {showSettings && (
         <SettingsPanel settings={settings} onUpdate={updateSetting} onClose={() => setShowSettings(false)} />

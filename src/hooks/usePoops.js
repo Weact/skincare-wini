@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { collection, doc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore'
+import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../firebase'
 
 function generateId() {
@@ -7,7 +7,10 @@ function generateId() {
 }
 
 // Poop log — one doc per logged event (a day can have more than one), just
-// a date + time. No edit flow, only add/delete.
+// a date + time + an `order` for the Custom-sort drag order. `order` is only
+// ever compared between entries sharing the same date (like products' order
+// within a category/type bucket), so different days can reuse the same
+// numbers by design.
 export function usePoops(userId) {
   const [poops, setPoops] = useState([])
 
@@ -22,8 +25,12 @@ export function usePoops(userId) {
 
   async function addPoop(entry) {
     const id = generateId()
+    const dayEntries = poops.filter(p => p.date === entry.date)
+    const order = dayEntries.length
+      ? Math.max(...dayEntries.map(p => p.order ?? 0)) + 1
+      : 0
     await setDoc(doc(db, 'users', userId, 'poops', id), {
-      id, ...entry, createdAt: new Date().toISOString(),
+      id, ...entry, order, createdAt: new Date().toISOString(),
     })
     return id
   }
@@ -32,5 +39,13 @@ export function usePoops(userId) {
     await deleteDoc(doc(db, 'users', userId, 'poops', id))
   }
 
-  return { poops, addPoop, deletePoop }
+  async function reorderPoops(orderedPoops) {
+    const batch = writeBatch(db)
+    orderedPoops.forEach((p, index) => {
+      batch.set(doc(db, 'users', userId, 'poops', p.id), { order: index }, { merge: true })
+    })
+    await batch.commit()
+  }
+
+  return { poops, addPoop, deletePoop, reorderPoops }
 }

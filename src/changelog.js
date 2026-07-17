@@ -32,6 +32,12 @@ export const CHANGELOG = [
       'Calendar button no longer shows for Poop (it has no separate calendar screen to open) — no leftover empty gap in the header',
       'Moved the item count ("X products"/"X workouts"/"X logged") to its own line below the tracker switch, so it no longer competes for space and pushes the header buttons onto a second row',
       'Removed the standalone "New category" and "Add type" buttons — the + button now opens a small animated menu to add a Category, Type, or Product',
+      'Select mode on every tracker — tap Select, pick items, then Delete N to bulk-remove them, with a summary popup that needs two taps to confirm',
+      'Sort a day\'s poop entries by Time or Feeling, ascending or descending',
+      'More stages to the calendar\'s poop marker — up to 7, escalating in size, wobble speed, and eventually a glow the busier the day gets',
+      'Each day on the poop calendar now shows its exact count as a small badge, alongside the marker',
+      'Daily average summary above the poop calendar, scoped to whichever month you\'re viewing — flip months to see that month\'s average',
+      'New "Custom" sort for poop entries — drag to reorder a day\'s list by hand; switching to Time/Feeling and back always restores your custom order exactly as you left it',
     ],
   },
   {

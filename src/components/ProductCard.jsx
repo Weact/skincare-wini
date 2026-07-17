@@ -14,7 +14,7 @@ const USAGE_OPTIONS = [
   { value: 24, label: '24 months' },
 ]
 
-export default function ProductCard({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories = [], types = [], onCreateType, events = [], onOpenEvent, dragHandleProps }) {
+export default function ProductCard({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories = [], types = [], onCreateType, events = [], onOpenEvent, dragHandleProps, selectMode = false, selected = false, onToggleSelect }) {
   const [name, setName] = useState(product.name || '')
   const [suggestion, setSuggestion] = useState(null)
   const [dismissedKey, setDismissedKey] = useState(null)
@@ -164,10 +164,20 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   }
 
   const status = getProductStatus(product)
+  const showBody = expanded && !selectMode
 
   return (
-    <div className={`card card--${status.type}`}>
-      <div className="card-header" onClick={onToggleExpanded}>
+    <div className={`card card--${status.type}${selectMode && selected ? ' card--selected' : ''}`}>
+      <div className="card-header" onClick={selectMode ? onToggleSelect : onToggleExpanded}>
+        {selectMode && (
+          <input
+            type="checkbox"
+            className="card-select-checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            onClick={e => e.stopPropagation()}
+          />
+        )}
         {dragHandleProps && (
           <span className="product-drag-handle" {...dragHandleProps} onClick={e => e.stopPropagation()}>
             <svg width="12" height="16" viewBox="0 0 12 16" fill="none">
@@ -212,15 +222,17 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
             </span>
           )}
           <span className={`badge badge--${status.type}`}>{status.label}</span>
-          <span className={`chevron ${expanded ? 'chevron--up' : ''}`}>
-            <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
-              <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </span>
+          {!selectMode && (
+            <span className={`chevron ${expanded ? 'chevron--up' : ''}`}>
+              <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+                <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+          )}
         </div>
       </div>
 
-      {expanded && (
+      {showBody && (
         <div className="card-body">
           <div className="field">
             <label className="field-label">Photo</label>

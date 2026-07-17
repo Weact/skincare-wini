@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import ProductCard from './ProductCard'
 import EmojiPicker from './EmojiPicker'
 
-function SortableProductItem({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories, types, onCreateType, events, onOpenEvent }) {
+function SortableProductItem({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories, types, onCreateType, events, onOpenEvent, selectMode, selected, onToggleSelect }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `prod-${product.id}`,
   })
@@ -26,6 +26,9 @@ function SortableProductItem({ product, onUpdate, onDelete, startExpanded, expan
         events={events}
         onOpenEvent={onOpenEvent}
         dragHandleProps={{ ...attributes, ...listeners }}
+        selectMode={selectMode}
+        selected={selected}
+        onToggleSelect={onToggleSelect}
       />
     </li>
   )
@@ -50,6 +53,9 @@ export default function TypeSection({
   newProductId,
   expandedIds,
   onToggleExpanded,
+  selectMode,
+  selectedIds,
+  onToggleSelect,
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -195,6 +201,9 @@ export default function TypeSection({
                 onCreateType={onCreateType}
                 events={events}
                 onOpenEvent={onOpenEvent}
+                selectMode={selectMode}
+                selected={selectedIds?.has(product.id)}
+                onToggleSelect={() => onToggleSelect(product.id)}
               />
             ))}
           </ul>

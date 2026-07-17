@@ -422,6 +422,21 @@ body {
   opacity: 0.72;
 }
 
+.card--selected {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: var(--primary-light);
+}
+
+.card-select-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
 /* Card header (collapsed/always visible) */
 .card-header {
   display: flex;
@@ -847,6 +862,99 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 
 .delete-btn:active {
   opacity: 0.7;
+}
+
+/* ── Select mode toolbar ── */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.selection-toggle-btn {
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.selection-toggle-btn--active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.selection-delete-btn {
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--red);
+  border: none;
+  border-radius: 20px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: opacity 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.selection-delete-btn:active {
+  opacity: 0.75;
+}
+
+/* ── Bulk delete confirmation modal ── */
+.delete-confirm-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+
+.delete-confirm-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  border-radius: var(--radius-xs);
+}
+
+.delete-confirm-item:nth-child(odd) {
+  background: var(--bg);
+}
+
+.delete-confirm-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.delete-confirm-sublabel {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.delete-confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.delete-confirm-actions .delete-btn {
+  width: auto;
+  flex: 1;
+  margin-top: 0;
 }
 
 /* ── FAB group ── */
@@ -2069,7 +2177,36 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   transition: font-size 0.15s;
 }
 
-/* The more logged that day, the bigger (and wobblier) it gets */
+/* Exact count, since the emoji's size/wobble only communicates "roughly
+   how much" — this pins down the precise number */
+.poop-count-badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 2px;
+  border-radius: 7px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 13px;
+  text-align: center;
+}
+
+.cal-cell--selected .poop-count-badge {
+  background: #fff;
+  color: var(--primary);
+}
+
+/* Single-tile variant of .wk-summary-row (one stat, not two side by side) */
+.poop-summary-row {
+  grid-template-columns: 1fr;
+}
+
+/* The more logged that day, the bigger (and wobblier) it gets — seven
+   stages total, escalating in size, wiggle speed, and eventually a glow */
 .poop-dot--2 {
   font-size: 12px;
 }
@@ -2080,13 +2217,36 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 .poop-dot--4 {
-  font-size: 19px;
-  animation: poop-wiggle 0.45s ease-in-out infinite;
+  font-size: 18px;
+  animation: poop-wiggle 0.55s ease-in-out infinite;
+}
+
+.poop-dot--5 {
+  font-size: 21px;
+  animation: poop-wiggle 0.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 3px rgba(255, 180, 0, 0.65));
+}
+
+.poop-dot--6 {
+  font-size: 25px;
+  animation: poop-wiggle 0.3s ease-in-out infinite;
+  filter: drop-shadow(0 0 5px rgba(255, 120, 0, 0.75));
+}
+
+.poop-dot--7 {
+  font-size: 29px;
+  animation: poop-wiggle-hard 0.22s ease-in-out infinite;
+  filter: drop-shadow(0 0 7px rgba(255, 60, 0, 0.85));
 }
 
 @keyframes poop-wiggle {
   0%, 100% { transform: translateX(-50%) rotate(-12deg); }
   50%      { transform: translateX(-50%) rotate(12deg); }
+}
+
+@keyframes poop-wiggle-hard {
+  0%, 100% { transform: translateX(-50%) rotate(-18deg) scale(1); }
+  50%      { transform: translateX(-50%) rotate(18deg) scale(1.18); }
 }
 
 .cal-day-section {
@@ -2186,6 +2346,12 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   padding: 10px 12px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.cal-event--selected {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: var(--primary-light);
 }
 
 .cal-event-emoji {

@@ -5,7 +5,7 @@ import ProductCard from './ProductCard'
 import TypeSection from './TypeSection'
 import EmojiPicker from './EmojiPicker'
 
-function SortableProductItem({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories, types, onCreateType, events, onOpenEvent }) {
+function SortableProductItem({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories, types, onCreateType, events, onOpenEvent, selectMode, selected, onToggleSelect }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `prod-${product.id}`,
   })
@@ -27,6 +27,9 @@ function SortableProductItem({ product, onUpdate, onDelete, startExpanded, expan
         events={events}
         onOpenEvent={onOpenEvent}
         dragHandleProps={{ ...attributes, ...listeners }}
+        selectMode={selectMode}
+        selected={selected}
+        onToggleSelect={onToggleSelect}
       />
     </li>
   )
@@ -64,6 +67,9 @@ export default function CategorySection({
   expandedIds,
   onToggleExpanded,
   dragHandleProps,    // provided by parent SortableCategory wrapper
+  selectMode,
+  selectedIds,
+  onToggleSelect,
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -221,6 +227,9 @@ export default function CategorySection({
                   newProductId={newProductId}
                   expandedIds={expandedIds}
                   onToggleExpanded={onToggleExpanded}
+                  selectMode={selectMode}
+                  selectedIds={selectedIds}
+                  onToggleSelect={onToggleSelect}
                 />
               ))}
             </SortableContext>
@@ -242,6 +251,9 @@ export default function CategorySection({
                   onCreateType={onCreateType}
                   events={events}
                   onOpenEvent={onOpenEvent}
+                  selectMode={selectMode}
+                  selected={selectedIds?.has(product.id)}
+                  onToggleSelect={() => onToggleSelect(product.id)}
                 />
               ))}
             </ul>

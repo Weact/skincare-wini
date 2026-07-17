@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { todayISO, formatDayHeading, formatMonthYear } from '../utils/dateUtils'
+import { todayISO, formatDayHeading, formatMonthYear, formatDisplayDate, formatEventTime } from '../utils/dateUtils'
 import { mondayOfWeek, sundayOfWeek } from '../utils/workoutUtils'
 import WorkoutForm from './WorkoutForm'
 import WorkoutCard from './WorkoutCard'
 import DateInput from './DateInput'
+import SelectionBar from './SelectionBar'
+import DeleteConfirmModal from './DeleteConfirmModal'
 
 // dirLabels spell the order out on the active chip, since bare arrows are
 // read two opposite ways; the arrow itself follows the spreadsheet
@@ -36,7 +38,7 @@ function groupByDay(list) {
   return byDate
 }
 
-function DayGroup({ date, workouts, today, highlightWeek, stepsCount, updateWorkout, deleteWorkout, onOpenCalendar }) {
+function DayGroup({ date, workouts, today, highlightWeek, stepsCount, updateWorkout, deleteWorkout, onOpenCalendar, selectMode, selectedIds, onToggleSelect }) {
   return (
     <div className="wk-day-group">
       <div className="cal-day-heading wk-day-heading">
@@ -54,6 +56,9 @@ function DayGroup({ date, workouts, today, highlightWeek, stepsCount, updateWork
               onUpdate={updates => updateWorkout(w.id, updates)}
               onDelete={() => deleteWorkout(w.id)}
               onOpenCalendar={onOpenCalendar}
+              selectMode={selectMode}
+              selected={selectedIds?.has(w.id)}
+              onToggleSelect={() => onToggleSelect(w.id)}
             />
           </li>
         ))}
@@ -65,7 +70,7 @@ function DayGroup({ date, workouts, today, highlightWeek, stepsCount, updateWork
 // Collapsible month bucket in the past-workouts journal — rendered only for
 // months that actually contain workouts. The current month starts expanded;
 // older ones start collapsed.
-function MonthSection({ monthKey, dates, byDate, today, startOpen, stepsByDate, highlightUntil, updateWorkout, deleteWorkout, onOpenCalendar }) {
+function MonthSection({ monthKey, dates, byDate, today, startOpen, stepsByDate, highlightUntil, updateWorkout, deleteWorkout, onOpenCalendar, selectMode, selectedIds, onToggleSelect }) {
   const [collapsed, setCollapsed] = useState(!startOpen)
   const count = dates.reduce((sum, d) => sum + byDate[d].length, 0)
   const [year, month] = [parseInt(monthKey.slice(0, 4)), parseInt(monthKey.slice(5)) - 1]
@@ -92,6 +97,9 @@ function MonthSection({ monthKey, dates, byDate, today, startOpen, stepsByDate, 
           updateWorkout={updateWorkout}
           deleteWorkout={deleteWorkout}
           onOpenCalendar={onOpenCalendar}
+          selectMode={selectMode}
+          selectedIds={selectedIds}
+          onToggleSelect={onToggleSelect}
         />
       ))}
     </div>
@@ -105,6 +113,32 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
   const [sortBy, setSortBy] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
   const today = todayISO()
+
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  function toggleSelectMode() {
+    setSelectMode(s => !s)
+    setSelectedIds(new Set())
+    setShowForm(false)
+  }
+
+  function toggleSelected(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function confirmBulkDelete() {
+    selectedIds.forEach(id => deleteWorkout(id))
+    setSelectedIds(new Set())
+    setSelectMode(false)
+    setShowDeleteConfirm(false)
+  }
 
   function handleSortClick(key) {
     if (sortBy === key) {
@@ -215,8 +249,23 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
     onLogged?.(payload)
   }
 
+  const selectedItems = workouts
+    .filter(w => selectedIds.has(w.id))
+    .map(w => ({
+      id: w.id,
+      label: w.name || 'Unnamed workout',
+      sublabel: [formatDisplayDate(w.date), w.time ? formatEventTime(w.time) : null].filter(Boolean).join(' · '),
+    }))
+
   return (
     <>
+      <SelectionBar
+        selectMode={selectMode}
+        count={selectedIds.size}
+        onToggle={toggleSelectMode}
+        onDeleteClick={() => setShowDeleteConfirm(true)}
+      />
+
       {(week.count > 0 || month.count > 0 || week.steps > 0 || month.steps > 0) && (
         <div className="wk-summary-row">
           <div className="wk-summary-tile">
@@ -254,7 +303,7 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
         </button>
       </div>
 
-      {showForm ? (
+      {!selectMode && (showForm ? (
         <div className="wk-form-panel">
           <WorkoutForm onSubmit={handleAdd} onCancel={() => setShowForm(false)} />
         </div>
@@ -265,7 +314,7 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
           </svg>
           Log workout
         </button>
-      )}
+      ))}
 
       {workouts.length > 1 && (
         <div className="cal-sort-row wk-sort-row">
@@ -316,6 +365,9 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
                 onUpdate={updates => updateWorkout(w.id, updates)}
                 onDelete={() => deleteWorkout(w.id)}
                 onOpenCalendar={onOpenCalendar}
+                selectMode={selectMode}
+                selected={selectedIds.has(w.id)}
+                onToggleSelect={() => toggleSelected(w.id)}
               />
             </li>
           ))}
@@ -338,6 +390,9 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
                   updateWorkout={updateWorkout}
                   deleteWorkout={deleteWorkout}
                   onOpenCalendar={onOpenCalendar}
+                  selectMode={selectMode}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelected}
                 />
               ))}
             </div>
@@ -359,9 +414,20 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
               updateWorkout={updateWorkout}
               deleteWorkout={deleteWorkout}
               onOpenCalendar={onOpenCalendar}
+              selectMode={selectMode}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelected}
             />
           ))}
         </>
+      )}
+
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          items={selectedItems}
+          onConfirm={confirmBulkDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
     </>
   )

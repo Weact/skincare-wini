@@ -6,7 +6,7 @@ import WorkoutForm from './WorkoutForm'
 // One journal entry — reuses the product card look (collapsible header +
 // body). Expanded body shows the exercises and notes; Edit swaps the body
 // for the shared WorkoutForm in place.
-export default function WorkoutCard({ workout, highlight = false, showDate = false, onUpdate, onDelete, onOpenCalendar }) {
+export default function WorkoutCard({ workout, highlight = false, showDate = false, onUpdate, onDelete, onOpenCalendar, selectMode = false, selected = false, onToggleSelect }) {
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -40,9 +40,20 @@ export default function WorkoutCard({ workout, highlight = false, showDate = fal
     workout.location || null,
   ].filter(Boolean).join(' · ')
 
+  const showBody = expanded && !selectMode
+
   return (
-    <div className={`card${highlight ? ' card--week-highlight' : ''}`}>
-      <div className="card-header" onClick={() => setExpanded(e => !e)}>
+    <div className={`card${highlight ? ' card--week-highlight' : ''}${selectMode && selected ? ' card--selected' : ''}`}>
+      <div className="card-header" onClick={selectMode ? onToggleSelect : () => setExpanded(e => !e)}>
+        {selectMode && (
+          <input
+            type="checkbox"
+            className="card-select-checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            onClick={e => e.stopPropagation()}
+          />
+        )}
         <div className="card-header-left">
           <span className="wk-card-emoji">{workout.emoji || '🏋️'}</span>
           <div className="card-name-block">
@@ -58,15 +69,17 @@ export default function WorkoutCard({ workout, highlight = false, showDate = fal
               <path d="M8 2.5v4M16 2.5v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </span>
-          <span className={`chevron ${expanded ? 'chevron--up' : ''}`}>
-            <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
-              <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </span>
+          {!selectMode && (
+            <span className={`chevron ${expanded ? 'chevron--up' : ''}`}>
+              <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+                <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+          )}
         </div>
       </div>
 
-      {expanded && (
+      {showBody && (
         <div className="card-body">
           {editing ? (
             <WorkoutForm

@@ -17,6 +17,9 @@ export default function ExpiredSection({
   newProductId,
   expandedIds,
   onToggleExpanded,
+  selectMode,
+  selectedIds,
+  onToggleSelect,
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -51,6 +54,9 @@ export default function ExpiredSection({
                 onCreateType={onCreateType}
                 events={events}
                 onOpenEvent={onOpenEvent}
+                selectMode={selectMode}
+                selected={selectedIds?.has(product.id)}
+                onToggleSelect={() => onToggleSelect(product.id)}
               />
             </li>
           ))}
