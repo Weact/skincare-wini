@@ -43,5 +43,14 @@ service cloud.firestore {
       allow create: if isSignedInNonAnonymous() && request.resource.data.uid == request.auth.uid;
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
+
+    // Same shape as profileCodes, but resolves a person's own "viewer code"
+    // to their uid — this is what gets typed into someone else's whitelist,
+    // instead of their raw Firebase uid
+    match /viewerCodes/{code} {
+      allow read: if isSignedInNonAnonymous();
+      allow create: if isSignedInNonAnonymous() && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
   }
 }

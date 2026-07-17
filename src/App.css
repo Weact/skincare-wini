@@ -2751,16 +2751,8 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   min-width: 0;
 }
 
-/* User-ID variant — long and lowercase-mixed, unlike the short share code,
-   so it gets a smaller size, no letter-spacing, and a scrollable single line
-   instead of trying to make it look like a memorable code */
-.profile-code--id {
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-align: left;
-  white-space: nowrap;
-  overflow-x: auto;
+.field-hint--error {
+  color: var(--red);
 }
 
 .whitelist-list {

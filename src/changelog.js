@@ -40,7 +40,7 @@ export const CHANGELOG = [
       'New "Custom" sort for poop entries — drag to reorder a day\'s list by hand; switching to Time/Feeling and back always restores your custom order exactly as you left it',
       'Profile sharing (Settings → Profile sharing, Google-linked accounts only) — go Public to get a short code, then share it so someone can view your Workouts and Poop tracker read-only. Skincare and both calendars stay private no matter what',
       'Added a Whitelist visibility option alongside Public/Private — keeps your profile hidden from everyone except the specific user IDs you add',
-      'Your user ID is now shown in Settings (with a Copy button) so others can add you to their whitelist',
+      'Whitelisting someone no longer needs their raw account ID — everyone gets their own separate "viewer code" (Settings → Profile sharing) to hand out instead, generated automatically',
       'Enter someone else\'s code from the same Settings section to view their shared profile',
       'Moved the skincare "+" button from a floating circle at the bottom to a large button at the top of the list — the Category/Type/Product menu now drops down below it instead of growing upward',
     ],

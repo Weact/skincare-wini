@@ -28,8 +28,9 @@ export default function SettingsPanel({ settings, onUpdate, onClose, user, profi
   const [weight, setWeight] = useState(() => localStorage.getItem('bodyWeightKg') || '')
   const [codeInput, setCodeInput] = useState('')
   const [copied, setCopied] = useState(false)
-  const [idCopied, setIdCopied] = useState(false)
-  const [viewerIdInput, setViewerIdInput] = useState('')
+  const [viewerCodeCopied, setViewerCodeCopied] = useState(false)
+  const [viewerCodeInput, setViewerCodeInput] = useState('')
+  const [addViewerError, setAddViewerError] = useState('')
 
   const visibility = profile?.profileVisibility || 'private'
 
@@ -40,18 +41,23 @@ export default function SettingsPanel({ settings, onUpdate, onClose, user, profi
     setTimeout(() => setCopied(false), 2000)
   }
 
-  function handleCopyId() {
-    if (!user?.uid) return
-    navigator.clipboard?.writeText(user.uid)
-    setIdCopied(true)
-    setTimeout(() => setIdCopied(false), 2000)
+  function handleCopyViewerCode() {
+    if (!profile?.viewerCode) return
+    navigator.clipboard?.writeText(profile.viewerCode)
+    setViewerCodeCopied(true)
+    setTimeout(() => setViewerCodeCopied(false), 2000)
   }
 
-  function handleAddViewer() {
-    const id = viewerIdInput.trim()
-    if (!id) return
-    onAddViewer(id)
-    setViewerIdInput('')
+  async function handleAddViewer() {
+    const code = viewerCodeInput.trim()
+    if (!code) return
+    setAddViewerError('')
+    try {
+      await onAddViewer(code)
+      setViewerCodeInput('')
+    } catch {
+      setAddViewerError("That code doesn't match anyone")
+    }
   }
 
   function handleViewSubmit() {
@@ -237,7 +243,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose, user, profi
                 <div className="field">
                   <label className="field-label">Allowed viewers</label>
                   <div className="field-hint">
-                    Only these user IDs can view your shared profile — ask them for their ID below.
+                    Only people whose viewer code you add here can view your shared profile.
                   </div>
                   {profile?.allowedViewerUids?.length > 0 && (
                     <ul className="whitelist-list">
@@ -260,32 +266,34 @@ export default function SettingsPanel({ settings, onUpdate, onClose, user, profi
                     <input
                       type="text"
                       className="field-input"
-                      value={viewerIdInput}
-                      onChange={e => setViewerIdInput(e.target.value)}
+                      value={viewerCodeInput}
+                      onChange={e => { setViewerCodeInput(e.target.value.toUpperCase()); setAddViewerError('') }}
                       onKeyDown={e => { if (e.key === 'Enter') handleAddViewer() }}
-                      placeholder="Paste their user ID"
+                      placeholder="Paste their viewer code"
+                      maxLength={7}
                     />
                     <button
                       type="button"
                       className="wk-auto-btn"
                       onClick={handleAddViewer}
-                      disabled={!viewerIdInput.trim()}
+                      disabled={!viewerCodeInput.trim()}
                     >
                       Add
                     </button>
                   </div>
+                  {addViewerError && <div className="field-hint field-hint--error">{addViewerError}</div>}
                 </div>
               )}
 
               <div className="field">
-                <label className="field-label">Your user ID</label>
+                <label className="field-label">Your viewer code</label>
                 <div className="field-hint">
-                  Give this to someone so they can add you to their whitelist
+                  Give this to someone so they can add you to their whitelist — it's a separate code from your share code above, and never reveals your account ID
                 </div>
                 <div className="profile-view-row">
-                  <span className="profile-code profile-code--id">{user.uid}</span>
-                  <button type="button" className="cat-save-btn" onClick={handleCopyId}>
-                    {idCopied ? 'Copied!' : 'Copy'}
+                  <span className="profile-code">{profile?.viewerCode || 'Generating…'}</span>
+                  <button type="button" className="cat-save-btn" onClick={handleCopyViewerCode} disabled={!profile?.viewerCode}>
+                    {viewerCodeCopied ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
               </div>

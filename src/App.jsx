@@ -164,8 +164,16 @@ export default function App() {
   const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts(user?.uid)
   const { steps, logSteps } = useSteps(user?.uid)
   const { poops, addPoop, deletePoop, reorderPoops } = usePoops(user?.uid)
-  const { profile, setVisibility, addAllowedViewer, removeAllowedViewer } = useProfile(user?.uid)
+  const { profile, setVisibility, addAllowedViewer, removeAllowedViewer } = useProfile(user?.uid, user?.isAnonymous)
   const [viewingProfileCode, setViewingProfileCode] = useState(null)
+
+  // Belt-and-suspenders: Firestore's rules already refuse anonymous reads of
+  // shared profiles, but if someone signs out while mid-view (the only way
+  // an anonymous session could end up with this state set at all), drop
+  // straight back out rather than leave a dead/erroring view on screen.
+  useEffect(() => {
+    if (user?.isAnonymous) setViewingProfileCode(null)
+  }, [user?.isAnonymous])
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarTarget, setCalendarTarget] = useState(null)
   const [workoutCalendarTarget, setWorkoutCalendarTarget] = useState(null)
@@ -724,7 +732,7 @@ export default function App() {
           <div className="app-loading">
             <div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" />
           </div>
-        ) : viewingProfileCode ? (
+        ) : viewingProfileCode && !user?.isAnonymous ? (
           <SharedProfileView code={viewingProfileCode} onExit={() => setViewingProfileCode(null)} />
         ) : !mode ? (
           <WelcomeScreen onOpenSettings={() => setShowSettings(true)} />
