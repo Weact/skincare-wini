@@ -1,4 +1,5 @@
-import { toISODate } from '../utils/dateUtils'
+import { useState } from 'react'
+import { toISODate, formatDayHeading } from '../utils/dateUtils'
 
 function addDays(dateStr, n) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -23,6 +24,7 @@ function monthDayLabel(dateStr) {
 // the Steps summary tile. Read-only — logging still happens from the steps
 // row. `periodStart` is the Monday of the week, or the 1st of the month.
 export default function StepsGraphModal({ period, periodStart, today, stepsByDate, onClose }) {
+  const [activeIdx, setActiveIdx] = useState(null)
   const count = period === 'month' ? daysInMonth(periodStart) : 7
   const dense = count > 7
   const days = Array.from({ length: count }, (_, i) => addDays(periodStart, i))
@@ -48,19 +50,29 @@ export default function StepsGraphModal({ period, periodStart, today, stepsByDat
             <span className="steps-graph-avg-value">{avg.toLocaleString('en-US')}</span>
             <span className="steps-graph-avg-label">avg steps/day this {period}</span>
           </div>
+          <div className="steps-graph-detail">
+            {activeIdx !== null
+              ? <><strong>{values[activeIdx].toLocaleString('en-US')}</strong> steps · {formatDayHeading(days[activeIdx])}</>
+              : <span className="steps-graph-detail-hint">Tap a bar to see the exact count</span>}
+          </div>
           <div className={`steps-graph-bars${dense ? ' steps-graph-bars--dense' : ''}`}>
             {days.map((d, i) => {
               const isToday = d === today
               const isFuture = d > today
               return (
-                <div key={d} className={`steps-graph-col${isToday ? ' steps-graph-col--today' : ''}`}>
+                <button
+                  type="button"
+                  key={d}
+                  className={`steps-graph-col${isToday ? ' steps-graph-col--today' : ''}${activeIdx === i ? ' steps-graph-col--active' : ''}`}
+                  onMouseEnter={() => setActiveIdx(i)}
+                  onMouseLeave={() => setActiveIdx(prev => (prev === i ? null : prev))}
+                  onFocus={() => setActiveIdx(i)}
+                  onClick={() => setActiveIdx(prev => (prev === i ? null : i))}
+                >
                   {!dense && (
                     <span className="steps-graph-value">{values[i] > 0 ? values[i].toLocaleString('en-US') : ''}</span>
                   )}
-                  <div
-                    className="steps-graph-bar-track"
-                    title={values[i] > 0 ? `${values[i].toLocaleString('en-US')} steps` : undefined}
-                  >
+                  <div className="steps-graph-bar-track">
                     <div
                       className={`steps-graph-bar${isFuture ? ' steps-graph-bar--future' : ''}`}
                       style={{ height: values[i] > 0 ? `${Math.max(4, (values[i] / max) * 100)}%` : '0%' }}
@@ -71,7 +83,7 @@ export default function StepsGraphModal({ period, periodStart, today, stepsByDat
                       ? (isToday || (i % 5 === 0) ? monthDayLabel(d) : '')
                       : weekdayLabel(d)}
                   </span>
-                </div>
+                </button>
               )
             })}
           </div>

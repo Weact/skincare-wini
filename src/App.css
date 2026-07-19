@@ -2922,19 +2922,21 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 /* ── Workout tracker ── */
 .wk-period-toggle {
   display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .wk-period-btn {
-  font-size: 12px;
+  flex: 1;
+  font-size: 15px;
   font-family: inherit;
   font-weight: 600;
   color: var(--text-muted);
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: 20px;
-  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  padding: 11px 12px;
+  min-height: 44px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
   -webkit-tap-highlight-color: transparent;
@@ -3014,6 +3016,18 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   color: var(--text-muted);
 }
 
+.steps-graph-detail {
+  min-height: 18px;
+  font-size: 13px;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+.steps-graph-detail-hint {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .steps-graph-bars {
   display: flex;
   align-items: flex-end;
@@ -3042,6 +3056,21 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   align-items: center;
   height: 100%;
   gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.steps-graph-col--active .steps-graph-bar {
+  background: var(--text);
+}
+
+.steps-graph-col--active .steps-graph-day {
+  color: var(--text);
+  font-weight: 700;
 }
 
 .steps-graph-value {

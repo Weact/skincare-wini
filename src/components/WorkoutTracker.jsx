@@ -271,7 +271,6 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
     }))
 
   const activeSummary = summaryPeriod === 'week' ? week : month
-  const periodLabel = summaryPeriod === 'week' ? 'This week' : 'This month'
 
   return (
     <>
@@ -295,7 +294,7 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
           </div>
           <div className="wk-summary-row">
             <div className="wk-summary-tile">
-              <span className="wk-summary-title">🏋️ {periodLabel}</span>
+              <span className="wk-summary-title">🏋️ Workouts</span>
               <span className="wk-summary-main">
                 {activeSummary.count} workout{activeSummary.count === 1 ? '' : 's'}
               </span>

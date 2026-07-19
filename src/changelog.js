@@ -64,6 +64,7 @@ export const CHANGELOG = [
       'Fixed holding down on a Positions card triggering the phone\'s native text-selection/callout menu',
       'Workout summary split into its own Workouts and Steps tiles, with a Week/Month switch above them',
       'Tap the Steps tile to open a bar graph of steps for each day of the week or month',
+      'Hover or tap any bar on the steps graph to see that exact day\'s count and date',
     ],
   },
   {
