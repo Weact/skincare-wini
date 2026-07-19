@@ -39,6 +39,7 @@ export const CHANGELOG = [
       'Daily average summary above the poop calendar, scoped to whichever month you\'re viewing — flip months to see that month\'s average',
       'New "Custom" sort for poop entries — drag to reorder a day\'s list by hand; switching to Time/Feeling and back always restores your custom order exactly as you left it',
       'New Friends menu (Google-linked accounts only) — everyone gets a short friend code; send a request with someone else\'s code, and once they accept you can view each other\'s Skincare, Workouts, and Poop trackers read-only. Both calendars stay private no matter what',
+      'The Friends menu slides in over the tracker instead of opening as a popup',
       'Go Private in the Friends menu to block incoming friend requests — friends you already have aren\'t affected',
       'Give each friend a nickname so they show up as "Bob" instead of their code',
       'Tap View next to a friend to open their shared profile — it stays open until you tap Exit, even if you switch your own tracker in the background',

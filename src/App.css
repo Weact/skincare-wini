@@ -972,6 +972,17 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   margin-bottom: 14px;
 }
 
+/* ── Friends panel — slides into the tracker area rather than opening as
+   a modal, so it reads as a change of view, not an interruption ── */
+.friends-panel {
+  animation: friends-panel-slide-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes friends-panel-slide-in {
+  from { transform: translateX(16px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 /* ── Skincare "Add" bar — large horizontal button + secondary photo FAB,
    at the top of the list (used to be a floating bottom-right FAB group) ── */
 .skincare-add-bar {

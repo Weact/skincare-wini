@@ -666,7 +666,7 @@ export default function App() {
       <header className="app-header">
         <div className="app-header-top">
           <div className="app-header-left">
-            {mode && !viewingFriend && (
+            {mode && !viewingFriend && !showFriends && (
               <div className="mode-switch" role="tablist" aria-label="Tracker">
                 {TRACKERS.filter(t => settings.enabledTrackers.includes(t.key)).map(t => (
                   <button
@@ -697,7 +697,7 @@ export default function App() {
                 </svg>
                 {changelogIsNew && <span className="changelog-dot" />}
               </button>
-              {mode && mode !== 'poop' && !viewingFriend && (
+              {mode && mode !== 'poop' && !viewingFriend && !showFriends && (
                 <button
                   className="calendar-btn"
                   onClick={() => setShowCalendar(true)}
@@ -710,7 +710,7 @@ export default function App() {
                   </svg>
                 </button>
               )}
-              {user && !user.isAnonymous && !viewingFriend && (
+              {user && !user.isAnonymous && !viewingFriend && !showFriends && (
                 <button className="friends-btn" onClick={() => setShowFriends(true)} aria-label="Friends">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
                     <circle cx="9" cy="8" r="3.2" stroke="currentColor" strokeWidth="2"/>
@@ -730,7 +730,7 @@ export default function App() {
             <AuthButton user={user} onLinkGoogle={linkWithGoogle} onSignOut={handleSignOut} />
           </div>
         </div>
-        {mode && !viewingFriend && (
+        {mode && !viewingFriend && !showFriends && (
           <span className="app-count">
             {mode === 'workout'
               ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`
@@ -746,6 +746,22 @@ export default function App() {
           <div className="app-loading">
             <div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" />
           </div>
+        ) : showFriends && !user?.isAnonymous ? (
+          <FriendsPanel
+            onClose={() => setShowFriends(false)}
+            profile={profile}
+            onSetVisibility={setVisibility}
+            friends={friends}
+            incoming={incoming}
+            outgoing={outgoing}
+            onSendRequest={sendRequest}
+            onAcceptRequest={acceptRequest}
+            onDeclineRequest={declineRequest}
+            onCancelRequest={cancelRequest}
+            onRemoveFriend={removeFriend}
+            onSetAlias={setFriendAlias}
+            onViewFriend={(uid, label) => { setViewingFriend({ uid, label }); setShowFriends(false) }}
+          />
         ) : viewingFriend && !user?.isAnonymous ? (
           <SharedProfileView uid={viewingFriend.uid} label={viewingFriend.label} onExit={() => setViewingFriend(null)} />
         ) : !mode ? (
@@ -1056,23 +1072,6 @@ export default function App() {
           settings={settings}
           onUpdate={updateSetting}
           onClose={() => setShowSettings(false)}
-        />
-      )}
-      {showFriends && (
-        <FriendsPanel
-          onClose={() => setShowFriends(false)}
-          profile={profile}
-          onSetVisibility={setVisibility}
-          friends={friends}
-          incoming={incoming}
-          outgoing={outgoing}
-          onSendRequest={sendRequest}
-          onAcceptRequest={acceptRequest}
-          onDeclineRequest={declineRequest}
-          onCancelRequest={cancelRequest}
-          onRemoveFriend={removeFriend}
-          onSetAlias={setFriendAlias}
-          onViewFriend={(uid, label) => { setViewingFriend({ uid, label }); setShowFriends(false) }}
         />
       )}
       {showCalendar && (mode === 'workout' ? (
