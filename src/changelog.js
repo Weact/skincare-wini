@@ -45,6 +45,7 @@ export const CHANGELOG = [
       'Tap View next to a friend to open their shared profile — it stays open until you tap Exit, even if you switch your own tracker in the background',
       'Unfriending someone removes them from both friend lists instantly, no confirmation needed from the other side',
       'Your tracker switch stays visible and tappable while the Friends menu is open, so you can jump straight to a tracker without closing it first',
+      'New Tracker visibility setting in the Friends menu — choose one visibility for all trackers, or customize Skincare/Workouts/Poop separately, controlling what friends can see once they\'re added',
       'Moved the skincare "+" button from a floating circle at the bottom to a large button at the top of the list — the Category/Type/Product menu now drops down below it instead of growing upward',
     ],
   },

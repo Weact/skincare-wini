@@ -166,7 +166,7 @@ export default function App() {
   const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts(user?.uid)
   const { steps, logSteps } = useSteps(user?.uid)
   const { poops, addPoop, deletePoop, reorderPoops } = usePoops(user?.uid)
-  const { profile, setVisibility } = useProfile(user?.uid, user?.isAnonymous)
+  const { profile, setVisibility, setTrackerVisibilityMode, setTrackerVisibility, setAllTrackerVisibility } = useProfile(user?.uid, user?.isAnonymous)
   const { friends, incoming, outgoing, sendRequest, acceptRequest, declineRequest, cancelRequest, removeFriend, setFriendAlias } = useFriends(user?.uid, profile?.profileCode)
   const [showFriends, setShowFriends] = useState(false)
   const [viewingFriend, setViewingFriend] = useState(null) // { uid, label }
@@ -752,6 +752,9 @@ export default function App() {
             onClose={() => setShowFriends(false)}
             profile={profile}
             onSetVisibility={setVisibility}
+            onSetTrackerVisibilityMode={setTrackerVisibilityMode}
+            onSetTrackerVisibility={setTrackerVisibility}
+            onSetAllTrackerVisibility={setAllTrackerVisibility}
             friends={friends}
             incoming={incoming}
             outgoing={outgoing}

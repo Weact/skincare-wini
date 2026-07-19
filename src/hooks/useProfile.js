@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
+import { TRACKERS } from '../constants'
 
 // Excludes 0/O, 1/I/L — easy to mix up when someone's reading the code out
 // loud or typing it back in from memory
@@ -24,6 +25,15 @@ function generateCode() {
 //    user, entered by someone else to send them a friend request. Generated
 //    once, unconditionally, regardless of visibility — a Private user still
 //    needs a code to hand out for when they flip back to Public later.
+//  - trackerVisibility ({ skincare, workout, poop }: bool) — once someone
+//    is a friend, which of your trackers they can actually see. Missing
+//    entirely, or missing a given key, both default to visible (see
+//    trackerVisible() in firestore.rules) so accounts that never touch this
+//    keep today's all-visible behaviour.
+//  - trackerVisibilityMode ('global' | 'custom') — UI-only, remembers
+//    whether the Friends panel should show one shared toggle or three
+//    independent ones. Has no bearing on the rules, which only ever look at
+//    trackerVisibility itself.
 export function useProfile(userId, isAnonymous) {
   const [profile, setProfile] = useState(null)
   const codeClaimStarted = useRef(false)
@@ -79,5 +89,24 @@ export function useProfile(userId, isAnonymous) {
     await setDoc(doc(db, 'users', userId), { profileVisibility: visibility }, { merge: true })
   }
 
-  return { profile, setVisibility }
+  async function setTrackerVisibilityMode(mode) {
+    await setDoc(doc(db, 'users', userId), { trackerVisibilityMode: mode }, { merge: true })
+  }
+
+  // Sets one tracker's visibility without touching the others (Custom
+  // mode). setDoc+merge deep-merges nested map fields (unlike a dotted
+  // string key, which it would treat as one literal flat field name), so
+  // this only ever touches trackerVisibility.<tracker>.
+  async function setTrackerVisibility(tracker, visible) {
+    await setDoc(doc(db, 'users', userId), { trackerVisibility: { [tracker]: visible } }, { merge: true })
+  }
+
+  // Sets every tracker to the same value in one write (Global mode).
+  async function setAllTrackerVisibility(visible) {
+    const trackerVisibility = {}
+    TRACKERS.forEach(t => { trackerVisibility[t.key] = visible })
+    await setDoc(doc(db, 'users', userId), { trackerVisibility }, { merge: true })
+  }
+
+  return { profile, setVisibility, setTrackerVisibilityMode, setTrackerVisibility, setAllTrackerVisibility }
 }

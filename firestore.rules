@@ -14,6 +14,15 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(userId)/friends/$(request.auth.uid));
     }
 
+    // Per-tracker visibility on top of friendship — `trackerVisibility` is a
+    // map like { skincare: true, workout: false, poop: true }. Missing map
+    // or missing key both default to visible, so accounts that never touch
+    // this setting keep today's behaviour (everything visible to friends).
+    function trackerVisible(userId, tracker) {
+      let owner = get(/databases/$(database)/documents/users/$(userId)).data;
+      return owner.get('trackerVisibility', {}).get(tracker, true) == true;
+    }
+
     // True if there's a still-pending request from `userId` to `friendUid` —
     // the condition that justifies `friendUid` writing themselves into
     // `userId`'s friend list as part of accepting it.
@@ -30,23 +39,23 @@ service cloud.firestore {
     // above still applies independently; Firestore grants access if either
     // rule allows it.
     match /users/{userId}/workouts/{workoutId} {
-      allow read: if isSignedInNonAnonymous() && isFriend(userId);
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'workout');
     }
 
     match /users/{userId}/poops/{poopId} {
-      allow read: if isSignedInNonAnonymous() && isFriend(userId);
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'poop');
     }
 
     match /users/{userId}/categories/{categoryId} {
-      allow read: if isSignedInNonAnonymous() && isFriend(userId);
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'skincare');
     }
 
     match /users/{userId}/types/{typeId} {
-      allow read: if isSignedInNonAnonymous() && isFriend(userId);
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'skincare');
     }
 
     match /users/{userId}/products/{productId} {
-      allow read: if isSignedInNonAnonymous() && isFriend(userId);
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'skincare');
     }
 
     // Lets a friend read the owner's profile doc directly (for the shared

@@ -2050,6 +2050,60 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   font-weight: 600;
 }
 
+/* Per-tracker friend visibility — Global mode gets one full-width toggle,
+   Custom mode gets one compact toggle per row */
+.tracker-visibility-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tracker-visibility-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg);
+  border-radius: var(--radius-xs);
+  padding: 8px 10px;
+}
+
+.tracker-visibility-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tracker-vis-toggle {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tracker-vis-toggle--global {
+  align-self: flex-start;
+}
+
+.tracker-vis-btn {
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tracker-vis-btn--active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
 /* Accent swatches */
 .settings-accent-row {
   display: flex;
