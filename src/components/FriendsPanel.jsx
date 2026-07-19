@@ -123,7 +123,7 @@ export default function FriendsPanel({ onClose, profile, onSetVisibility, onSetT
               </button>
             </div>
             <div className="field-hint">
-              Visible — friends can open this tracker on your shared profile. Hidden — it's left out entirely, as if it didn't exist.
+              Visible makes all your trackers open to friends on your shared profile. Hidden leaves all of them out entirely, as if you had none.
             </div>
           </>
         ) : (
@@ -155,7 +155,7 @@ export default function FriendsPanel({ onClose, profile, onSetVisibility, onSetT
               })}
             </div>
             <div className="field-hint">
-              Visible — friends can open that tracker on your shared profile. Hidden — it's left out entirely, as if it didn't exist.
+              Set each tracker on its own — Visible ones open on your shared profile, Hidden ones are left out entirely, as if you didn't have them.
             </div>
           </>
         )}
