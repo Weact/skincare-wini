@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { TRACKERS } from '../constants'
 
 const SEND_ERRORS = {
   'not-found': "That code doesn't match anyone",
@@ -9,22 +8,17 @@ const SEND_ERRORS = {
   'not-accepting': "That person isn't accepting friend requests right now (they're set to Private)",
 }
 
-// Friend system panel: privacy toggle, your own friend code, sending/
-// accepting/declining requests, and the friend list itself (each entry
-// editable with a private nickname, plus a button to view their shared
-// profile). Slides in over the tracker area rather than opening as a modal.
-export default function FriendsPanel({ onClose, profile, onSetVisibility, onSetTrackerVisibilityMode, onSetTrackerVisibility, onSetAllTrackerVisibility, friends, incoming, outgoing, onSendRequest, onAcceptRequest, onDeclineRequest, onCancelRequest, onRemoveFriend, onSetAlias, onViewFriend }) {
+// Friend system panel: your own friend code, sending/accepting/declining
+// requests, and the friend list itself (each entry editable with a private
+// nickname, plus a button to view their shared profile). Slides in over the
+// tracker area rather than opening as a modal. Privacy controls (who can add
+// you, tracker visibility) live in Settings → Privacy instead — this panel
+// is purely about the friend list/requests now.
+export default function FriendsPanel({ onClose, profile, friends, incoming, outgoing, onSendRequest, onAcceptRequest, onDeclineRequest, onCancelRequest, onRemoveFriend, onSetAlias, onViewFriend }) {
   const [codeInput, setCodeInput] = useState('')
   const [sendError, setSendError] = useState('')
   const [sending, setSending] = useState(false)
   const [copied, setCopied] = useState(false)
-
-  const visibility = profile?.profileVisibility || 'private'
-  const trackerVisibilityMode = profile?.trackerVisibilityMode || 'global'
-  const trackerVisibility = profile?.trackerVisibility || {}
-  const isTrackerVisible = key => trackerVisibility[key] !== false
-  const allTrackersVisible = TRACKERS.every(t => isTrackerVisible(t.key))
-  const allTrackersHidden = TRACKERS.every(t => !isTrackerVisible(t.key))
 
   function handleCopyCode() {
     if (!profile?.profileCode) return
@@ -61,104 +55,6 @@ export default function FriendsPanel({ onClose, profile, onSetVisibility, onSetT
         <button type="button" className="cat-cancel-btn cat-cancel-btn--text" onClick={onClose}>
           Close
         </button>
-      </div>
-
-      <div className="settings-section">
-        <div className="settings-section-title">Who can add you</div>
-        <div className="settings-seg">
-          <button
-            className={`settings-seg-btn${visibility === 'public' ? ' settings-seg-btn--active' : ''}`}
-            onClick={() => onSetVisibility('public')}
-          >
-            Public
-          </button>
-          <button
-            className={`settings-seg-btn${visibility === 'private' ? ' settings-seg-btn--active' : ''}`}
-            onClick={() => onSetVisibility('private')}
-          >
-            Private
-          </button>
-        </div>
-        <div className="field-hint">
-          {visibility === 'public'
-            ? 'Anyone with your code can send you a friend request.'
-            : 'Friend requests to you are blocked. Friends you already have are unaffected.'}
-        </div>
-      </div>
-
-      <div className="settings-section">
-        <div className="settings-section-title">Tracker visibility</div>
-        <div className="field-hint">Once someone's your friend, choose what they can actually see.</div>
-        <div className="settings-seg">
-          <button
-            className={`settings-seg-btn${trackerVisibilityMode === 'global' ? ' settings-seg-btn--active' : ''}`}
-            onClick={() => onSetTrackerVisibilityMode('global')}
-          >
-            Same for all
-          </button>
-          <button
-            className={`settings-seg-btn${trackerVisibilityMode === 'custom' ? ' settings-seg-btn--active' : ''}`}
-            onClick={() => onSetTrackerVisibilityMode('custom')}
-          >
-            Customize
-          </button>
-        </div>
-
-        {trackerVisibilityMode === 'global' ? (
-          <>
-            <div className="tracker-vis-toggle tracker-vis-toggle--global">
-              <button
-                type="button"
-                className={`tracker-vis-btn${allTrackersVisible ? ' tracker-vis-btn--active' : ''}`}
-                onClick={() => onSetAllTrackerVisibility(true)}
-              >
-                Visible
-              </button>
-              <button
-                type="button"
-                className={`tracker-vis-btn${allTrackersHidden ? ' tracker-vis-btn--active' : ''}`}
-                onClick={() => onSetAllTrackerVisibility(false)}
-              >
-                Hidden
-              </button>
-            </div>
-            <div className="field-hint">
-              Visible makes all your trackers open to friends on your shared profile. Hidden leaves all of them out entirely, as if you had none.
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="tracker-visibility-list">
-              {TRACKERS.map(t => {
-                const visible = isTrackerVisible(t.key)
-                return (
-                  <div key={t.key} className="tracker-visibility-row">
-                    <span className="tracker-visibility-label">{t.icon} {t.label}</span>
-                    <div className="tracker-vis-toggle">
-                      <button
-                        type="button"
-                        className={`tracker-vis-btn${visible ? ' tracker-vis-btn--active' : ''}`}
-                        onClick={() => onSetTrackerVisibility(t.key, true)}
-                      >
-                        Visible
-                      </button>
-                      <button
-                        type="button"
-                        className={`tracker-vis-btn${!visible ? ' tracker-vis-btn--active' : ''}`}
-                        onClick={() => onSetTrackerVisibility(t.key, false)}
-                      >
-                        Hidden
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="field-hint">
-              Set each tracker on its own — Visible ones open on your shared profile, Hidden ones are left out entirely, as if you didn't have them.
-            </div>
-          </>
-        )}
       </div>
 
       <div className="settings-section">
@@ -233,36 +129,40 @@ export default function FriendsPanel({ onClose, profile, onSetVisibility, onSetT
       )}
 
       <div className="settings-section">
-        <div className="settings-section-title">Your friends</div>
+        <div className="settings-section-title settings-section-title--lg">Your friends</div>
         {friends.length === 0 ? (
           <div className="field-hint">No friends yet — send a code above to add one.</div>
         ) : (
-          <ul className="whitelist-list">
-            {friends.map(friend => (
-              <li key={friend.uid} className="whitelist-item">
-                <div className="whitelist-item-info">
-                  <input
-                    type="text"
-                    className="whitelist-item-alias"
-                    defaultValue={friend.alias || ''}
-                    placeholder="Add a nickname"
-                    onBlur={e => handleAliasBlur(friend.uid, e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                  />
-                  <span className="whitelist-item-code">{friend.code || friend.uid}</span>
-                </div>
-                <div className="friend-request-actions">
-                  <button
-                    type="button"
-                    className="cat-save-btn"
-                    onClick={() => onViewFriend(friend.uid, friend.alias || friend.code)}
-                  >
-                    View
-                  </button>
-                  <button type="button" className="type-current-remove" onClick={() => onRemoveFriend(friend.uid)} aria-label="Remove friend">✕</button>
-                </div>
-              </li>
-            ))}
+          <ul className="friend-list">
+            {friends.map(friend => {
+              const initial = (friend.alias || friend.code || '?').trim().charAt(0).toUpperCase()
+              return (
+                <li key={friend.uid} className="friend-card">
+                  <span className="friend-avatar" aria-hidden="true">{initial}</span>
+                  <div className="whitelist-item-info">
+                    <input
+                      type="text"
+                      className="whitelist-item-alias"
+                      defaultValue={friend.alias || ''}
+                      placeholder="Add a nickname"
+                      onBlur={e => handleAliasBlur(friend.uid, e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                    />
+                    <span className="whitelist-item-code">{friend.code || friend.uid}</span>
+                  </div>
+                  <div className="friend-request-actions">
+                    <button
+                      type="button"
+                      className="cat-save-btn"
+                      onClick={() => onViewFriend(friend.uid, friend.alias || friend.code)}
+                    >
+                      View
+                    </button>
+                    <button type="button" className="type-current-remove" onClick={() => onRemoveFriend(friend.uid)} aria-label="Remove friend">✕</button>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>

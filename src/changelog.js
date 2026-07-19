@@ -56,6 +56,9 @@ export const CHANGELOG = [
       'The Positions tracker is never shared with friends, no matter your tracker visibility settings — it has no shared/read-only view at all',
       'Select mode on the Positions tracker — pick any revealed cards and hide them back under their cover, same Select/confirm pattern as every other tracker',
       'Positions grid grown from 26 to 106 cards to scratch through',
+      'Fixed scratching a Positions card trapping the whole touch gesture on mobile, blocking you from scrolling past the grid',
+      'Moved "Who can add you" and "Tracker visibility" out of the Friends menu into a new Privacy section in Settings',
+      'Redesigned the friends list — each friend now gets a card with an avatar initial, replacing the plain list row',
     ],
   },
   {

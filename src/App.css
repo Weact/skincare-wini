@@ -3089,6 +3089,58 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   white-space: nowrap;
 }
 
+/* Settings → Privacy — two labelled groups (who can add you, tracker
+   visibility) stacked inside one section, separated by a thin divider */
+.settings-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-subsection + .settings-subsection {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* Beautified friend list — bigger card per friend with an initial avatar,
+   replacing the plain .whitelist-item row (still used as-is for friend
+   requests, which have no identity/alias yet to build an avatar from) */
+.friend-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.friend-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  transition: border-color 0.15s;
+}
+
+.friend-card:hover {
+  border-color: var(--primary);
+}
+
+.friend-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 16px;
+  font-weight: 700;
+}
+
 /* Steps quick-logger */
 .wk-steps-row {
   display: flex;
@@ -3523,7 +3575,11 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   width: 100%;
   height: 100%;
   cursor: pointer;
-  touch-action: none;
+  /* pan-y (not none) lets the browser still treat a vertical swipe as page
+     scroll — with none, ANY touch starting on a card captured the whole
+     gesture and the user couldn't scroll past the grid at all on mobile.
+     Scratching (any other direction, or a stationary dab) still reaches JS. */
+  touch-action: pan-y;
   -webkit-tap-highlight-color: transparent;
 }
 

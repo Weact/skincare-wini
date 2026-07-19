@@ -786,10 +786,6 @@ export default function App() {
           <FriendsPanel
             onClose={() => setShowFriends(false)}
             profile={profile}
-            onSetVisibility={setVisibility}
-            onSetTrackerVisibilityMode={setTrackerVisibilityMode}
-            onSetTrackerVisibility={setTrackerVisibility}
-            onSetAllTrackerVisibility={setAllTrackerVisibility}
             friends={friends}
             incoming={incoming}
             outgoing={outgoing}
@@ -1139,6 +1135,12 @@ export default function App() {
           settings={settings}
           onUpdate={updateSetting}
           onClose={() => setShowSettings(false)}
+          showPrivacy={!!user && !user.isAnonymous}
+          profile={profile}
+          onSetVisibility={setVisibility}
+          onSetTrackerVisibilityMode={setTrackerVisibilityMode}
+          onSetTrackerVisibility={setTrackerVisibility}
+          onSetAllTrackerVisibility={setAllTrackerVisibility}
         />
       )}
       {showCalendar && (mode === 'workout' ? (

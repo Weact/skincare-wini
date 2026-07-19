@@ -22,7 +22,10 @@ const FONT_SIZES = [
   { key: 'lg', label: 'Large',  previewSize: '22px' },
 ]
 
-export default function SettingsPanel({ settings, onUpdate, onClose }) {
+export default function SettingsPanel({
+  settings, onUpdate, onClose,
+  showPrivacy, profile, onSetVisibility, onSetTrackerVisibilityMode, onSetTrackerVisibility, onSetAllTrackerVisibility,
+}) {
   // Body weight for the workout calorie estimate — device-local, same key
   // WorkoutForm reads (and first asks for) when estimating
   const [weight, setWeight] = useState(() => localStorage.getItem('bodyWeightKg') || '')
@@ -43,6 +46,16 @@ export default function SettingsPanel({ settings, onUpdate, onClose }) {
       : [...settings.enabledTrackers, key]
     onUpdate('enabledTrackers', next)
   }
+
+  // Privacy controls only apply to the friend system, which is Google-linked
+  // accounts only — showPrivacy is false (and profile is null) for anonymous
+  // users, so this whole section just doesn't render for them.
+  const visibility = profile?.profileVisibility || 'private'
+  const trackerVisibilityMode = profile?.trackerVisibilityMode || 'global'
+  const trackerVisibility = profile?.trackerVisibility || {}
+  const isTrackerVisible = key => trackerVisibility[key] !== false
+  const allTrackersVisible = TRACKERS.every(t => isTrackerVisible(t.key))
+  const allTrackersHidden = TRACKERS.every(t => !isTrackerVisible(t.key))
 
   useEffect(() => {
     function handle(e) { if (e.key === 'Escape') onClose() }
@@ -108,6 +121,111 @@ export default function SettingsPanel({ settings, onUpdate, onClose }) {
               </label>
             </div>
           </div>
+
+          {/* ── Privacy (friend system — Google-linked accounts only) ── */}
+          {showPrivacy && (
+            <div className="settings-section">
+              <div className="settings-section-title settings-section-title--lg">Privacy</div>
+
+              <div className="settings-subsection">
+                <div className="field-label">Who can add you</div>
+                <div className="settings-seg">
+                  <button
+                    className={`settings-seg-btn${visibility === 'public' ? ' settings-seg-btn--active' : ''}`}
+                    onClick={() => onSetVisibility('public')}
+                  >
+                    Public
+                  </button>
+                  <button
+                    className={`settings-seg-btn${visibility === 'private' ? ' settings-seg-btn--active' : ''}`}
+                    onClick={() => onSetVisibility('private')}
+                  >
+                    Private
+                  </button>
+                </div>
+                <div className="field-hint">
+                  {visibility === 'public'
+                    ? 'Anyone with your code can send you a friend request.'
+                    : 'Friend requests to you are blocked. Friends you already have are unaffected.'}
+                </div>
+              </div>
+
+              <div className="settings-subsection">
+                <div className="field-label">Tracker visibility</div>
+                <div className="field-hint">Once someone's your friend, choose what they can actually see.</div>
+                <div className="settings-seg">
+                  <button
+                    className={`settings-seg-btn${trackerVisibilityMode === 'global' ? ' settings-seg-btn--active' : ''}`}
+                    onClick={() => onSetTrackerVisibilityMode('global')}
+                  >
+                    Same for all
+                  </button>
+                  <button
+                    className={`settings-seg-btn${trackerVisibilityMode === 'custom' ? ' settings-seg-btn--active' : ''}`}
+                    onClick={() => onSetTrackerVisibilityMode('custom')}
+                  >
+                    Customize
+                  </button>
+                </div>
+
+                {trackerVisibilityMode === 'global' ? (
+                  <>
+                    <div className="tracker-vis-toggle tracker-vis-toggle--global">
+                      <button
+                        type="button"
+                        className={`tracker-vis-btn${allTrackersVisible ? ' tracker-vis-btn--active' : ''}`}
+                        onClick={() => onSetAllTrackerVisibility(true)}
+                      >
+                        Visible
+                      </button>
+                      <button
+                        type="button"
+                        className={`tracker-vis-btn${allTrackersHidden ? ' tracker-vis-btn--active' : ''}`}
+                        onClick={() => onSetAllTrackerVisibility(false)}
+                      >
+                        Hidden
+                      </button>
+                    </div>
+                    <div className="field-hint">
+                      Visible makes all your trackers open to friends on your shared profile. Hidden leaves all of them out entirely, as if you had none.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="tracker-visibility-list">
+                      {TRACKERS.map(t => {
+                        const visible = isTrackerVisible(t.key)
+                        return (
+                          <div key={t.key} className="tracker-visibility-row">
+                            <span className="tracker-visibility-label">{t.icon} {t.label}</span>
+                            <div className="tracker-vis-toggle">
+                              <button
+                                type="button"
+                                className={`tracker-vis-btn${visible ? ' tracker-vis-btn--active' : ''}`}
+                                onClick={() => onSetTrackerVisibility(t.key, true)}
+                              >
+                                Visible
+                              </button>
+                              <button
+                                type="button"
+                                className={`tracker-vis-btn${!visible ? ' tracker-vis-btn--active' : ''}`}
+                                onClick={() => onSetTrackerVisibility(t.key, false)}
+                              >
+                                Hidden
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="field-hint">
+                      Set each tracker on its own — Visible ones open on your shared profile, Hidden ones are left out entirely, as if you didn't have them.
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* ── Appearance ── */}
           <div className="settings-section">
