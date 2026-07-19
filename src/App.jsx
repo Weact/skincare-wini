@@ -27,6 +27,7 @@ import CalendarModal from './components/CalendarModal'
 import WorkoutCalendarModal from './components/WorkoutCalendarModal'
 import WorkoutTracker from './components/WorkoutTracker'
 import PoopTracker from './components/PoopTracker'
+import PositionsTracker from './components/PositionsTracker'
 import Toast from './components/Toast'
 import EmojiPicker from './components/EmojiPicker'
 import SelectionBar from './components/SelectionBar'
@@ -39,6 +40,7 @@ import { useEvents } from './hooks/useEvents'
 import { useWorkouts } from './hooks/useWorkouts'
 import { useSteps } from './hooks/useSteps'
 import { usePoops } from './hooks/usePoops'
+import { usePositions } from './hooks/usePositions'
 import { useProfile } from './hooks/useProfile'
 import { useFriends } from './hooks/useFriends'
 import WelcomeScreen from './components/WelcomeScreen'
@@ -167,6 +169,7 @@ export default function App() {
   const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts(user?.uid)
   const { steps, logSteps } = useSteps(user?.uid)
   const { poops, addPoop, deletePoop, reorderPoops } = usePoops(user?.uid)
+  const { positionStates, revealPosition, togglePositionDone, hidePositions } = usePositions(user?.uid)
   const { profile, setVisibility, setTrackerVisibilityMode, setTrackerVisibility, setAllTrackerVisibility } = useProfile(user?.uid, user?.isAnonymous)
   const { friends, incoming, outgoing, sendRequest, acceptRequest, declineRequest, cancelRequest, removeFriend, setFriendAlias } = useFriends(user?.uid, profile?.profileCode)
   const [showFriends, setShowFriends] = useState(false)
@@ -194,6 +197,7 @@ export default function App() {
   const [mode, setMode] = useState(() => {
     const enabled = getStoredEnabledTrackers()
     const stored = localStorage.getItem('trackerMode')
+    if (stored === 'positions' && localStorage.getItem('positionsEnabled') === 'true') return 'positions'
     return stored && enabled.includes(stored) ? stored : (enabled[0] || null)
   })
 
@@ -351,6 +355,7 @@ export default function App() {
     font:     localStorage.getItem('font')     || 'system',
     fontSize: localStorage.getItem('fontSize') || 'md',
     enabledTrackers: getStoredEnabledTrackers(),
+    positionsEnabled: localStorage.getItem('positionsEnabled') === 'true',
   }))
 
   useEffect(() => {
@@ -366,18 +371,30 @@ export default function App() {
     localStorage.setItem('font',     settings.font)
     localStorage.setItem('fontSize', settings.fontSize)
     localStorage.setItem('enabledTrackers', JSON.stringify(settings.enabledTrackers))
+    localStorage.setItem('positionsEnabled', String(settings.positionsEnabled))
   }, [settings])
 
   // If the active (or last-active) tracker gets unchecked in Settings, fall
   // back to another enabled one, or to the welcome screen if none are left.
+  // Positions is never auto-selected ahead of a "real" tracker — it's kept
+  // out of enabledTrackers/TRACKERS entirely (see constants.js) and normally
+  // only reached by an explicit tap — but it IS the fallback when it's the
+  // only tracker the user has on at all, so enabling just it doesn't strand
+  // them on the welcome screen with no way back in.
   useEffect(() => {
+    if (mode === 'positions') {
+      if (!settings.positionsEnabled) switchMode(settings.enabledTrackers[0] || null)
+      return
+    }
     if (mode && !settings.enabledTrackers.includes(mode)) {
       switchMode(settings.enabledTrackers[0] || null)
     } else if (!mode && settings.enabledTrackers.length > 0) {
       switchMode(settings.enabledTrackers[0])
+    } else if (!mode && settings.positionsEnabled) {
+      switchMode('positions')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.enabledTrackers])
+  }, [settings.enabledTrackers, settings.positionsEnabled])
 
   function updateSetting(key, value) {
     setSettings(s => ({ ...s, [key]: value }))
@@ -686,6 +703,17 @@ export default function App() {
                     <span className="mode-switch-label">{t.label}</span>
                   </button>
                 ))}
+                {settings.positionsEnabled && (
+                  <button
+                    role="tab"
+                    aria-selected={mode === 'positions'}
+                    className={`mode-switch-btn${mode === 'positions' ? ' mode-switch-btn--active' : ''}`}
+                    onClick={() => switchMode('positions')}
+                  >
+                    <span className="mode-switch-icon">🔥</span>
+                    <span className="mode-switch-label">Positions</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -703,7 +731,7 @@ export default function App() {
                 </svg>
                 {changelogIsNew && <span className="changelog-dot" />}
               </button>
-              {mode && mode !== 'poop' && !viewingFriend && !showFriends && (
+              {mode && mode !== 'poop' && mode !== 'positions' && !viewingFriend && !showFriends && (
                 <button
                   className="calendar-btn"
                   onClick={() => setShowCalendar(true)}
@@ -742,6 +770,8 @@ export default function App() {
               ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`
               : mode === 'poop'
               ? `${poops.length} logged`
+              : mode === 'positions'
+              ? `${Object.values(positionStates).filter(s => s.scratched).length} revealed`
               : `${products.length} ${products.length === 1 ? 'product' : 'products'}`}
           </span>
         )}
@@ -777,6 +807,13 @@ export default function App() {
           <WelcomeScreen onOpenSettings={() => setShowSettings(true)} />
         ) : mode === 'poop' ? (
           <PoopTracker poops={poops} addPoop={addPoop} deletePoop={deletePoop} reorderPoops={reorderPoops} />
+        ) : mode === 'positions' ? (
+          <PositionsTracker
+            positionStates={positionStates}
+            onReveal={revealPosition}
+            onToggleDone={togglePositionDone}
+            onHide={hidePositions}
+          />
         ) : mode === 'workout' ? (
           <WorkoutTracker
             workouts={workouts}

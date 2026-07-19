@@ -1,6 +1,6 @@
 // Shared "Select" / "Delete N" toolbar — reused at the top of every tracker
 // so bulk deletion works the same way everywhere.
-export default function SelectionBar({ selectMode, count, onToggle, onDeleteClick }) {
+export default function SelectionBar({ selectMode, count, onToggle, onDeleteClick, actionLabel = 'Delete' }) {
   return (
     <div className="selection-bar">
       <button
@@ -12,7 +12,7 @@ export default function SelectionBar({ selectMode, count, onToggle, onDeleteClic
       </button>
       {selectMode && count > 0 && (
         <button type="button" className="selection-delete-btn" onClick={onDeleteClick}>
-          Delete {count}
+          {actionLabel} {count}
         </button>
       )}
     </div>

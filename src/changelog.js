@@ -50,6 +50,11 @@ export const CHANGELOG = [
       'Moved the Poop tracker\'s Select button off its own row, next to the day\'s sort options — same treatment as the Workout journal',
       'Moved the skincare "+" button from a floating circle at the bottom to a large button at the top of the list — the Category/Type/Product menu now drops down below it instead of growing upward',
       'Mark a product as empty from its card — it moves into its own Empty section (like Expired), showing the date you emptied it',
+      'New Positions tracker (🔞 18+, off by default) — a scratch-off grid of sex positions, enable it from Settings behind a clear explicit-content warning',
+      'Scratch any card to reveal it, or tap "Reveal random position" to have one stand out from the grid for you to scratch',
+      'Check a revealed position as experienced whenever you feel like it — the date shows right on the card',
+      'The Positions tracker is never shared with friends, no matter your tracker visibility settings — it has no shared/read-only view at all',
+      'Select mode on the Positions tracker — pick any revealed cards and hide them back under their cover, same Select/confirm pattern as every other tracker',
     ],
   },
   {

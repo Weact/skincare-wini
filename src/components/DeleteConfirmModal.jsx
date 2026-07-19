@@ -2,8 +2,10 @@ import { useState, useRef, useEffect } from 'react'
 
 // Generic bulk-delete confirmation, used by every tracker's Select mode.
 // Mirrors the app's existing tap-twice delete pattern (arm, then confirm
-// within 3s) rather than a single irreversible click.
-export default function DeleteConfirmModal({ items, onConfirm, onCancel }) {
+// within 3s) rather than a single irreversible click. `verb`/`bodyText` let
+// a caller reuse this for a non-delete bulk action (e.g. Positions' "Hide")
+// without changing the default wording anywhere else.
+export default function DeleteConfirmModal({ items, onConfirm, onCancel, verb = 'Delete', bodyText }) {
   const [armed, setArmed] = useState(false)
   const timerRef = useRef(null)
 
@@ -23,7 +25,7 @@ export default function DeleteConfirmModal({ items, onConfirm, onCancel }) {
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <span className="modal-title">Delete {items.length} item{items.length === 1 ? '' : 's'}?</span>
+          <span className="modal-title">{verb} {items.length} item{items.length === 1 ? '' : 's'}?</span>
           <button className="modal-close" onClick={onCancel} aria-label="Close">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -31,7 +33,7 @@ export default function DeleteConfirmModal({ items, onConfirm, onCancel }) {
           </button>
         </div>
         <div className="modal-body">
-          <p className="field-hint">This will permanently delete the following:</p>
+          <p className="field-hint">{bodyText || `This will permanently ${verb.toLowerCase()} the following:`}</p>
           <ul className="delete-confirm-list">
             {items.map(item => (
               <li key={item.id} className="delete-confirm-item">
@@ -49,7 +51,7 @@ export default function DeleteConfirmModal({ items, onConfirm, onCancel }) {
               className={`delete-btn${armed ? ' delete-btn--confirm' : ''}`}
               onClick={handleConfirmClick}
             >
-              {armed ? 'Tap again to confirm' : `Delete ${items.length}`}
+              {armed ? 'Tap again to confirm' : `${verb} ${items.length}`}
             </button>
           </div>
         </div>

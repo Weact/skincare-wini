@@ -66,21 +66,46 @@ export default function SettingsPanel({ settings, onUpdate, onClose }) {
 
           {/* ── Trackers ── */}
           <div className="settings-section">
-            <div className="settings-section-title">Trackers</div>
+            <div className="settings-section-title settings-section-title--lg">Trackers</div>
             <div className="field-hint">
               Unchecked trackers are hidden from the header entirely
             </div>
-            <div className="settings-tracker-list">
+            <div className="tracker-toggle-list">
               {TRACKERS.map(t => (
-                <label key={t.key} className="cal-hide-expired">
-                  <input
-                    type="checkbox"
-                    checked={settings.enabledTrackers.includes(t.key)}
-                    onChange={() => toggleTracker(t.key)}
-                  />
-                  {t.icon} {t.label}
+                <label key={t.key} className="tracker-toggle-row">
+                  <span className="tracker-toggle-icon">{t.icon}</span>
+                  <span className="tracker-toggle-text">
+                    <span className="tracker-toggle-label">{t.label}</span>
+                  </span>
+                  <span className="tracker-toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={settings.enabledTrackers.includes(t.key)}
+                      onChange={() => toggleTracker(t.key)}
+                    />
+                    <span className="tracker-toggle-track"><span className="tracker-toggle-knob" /></span>
+                  </span>
                 </label>
               ))}
+              <label className="tracker-toggle-row tracker-toggle-row--warning">
+                <span className="tracker-toggle-icon">🔥</span>
+                <span className="tracker-toggle-text">
+                  <span className="tracker-toggle-label">
+                    Positions <span className="settings-warning-badge">18+</span>
+                  </span>
+                  <span className="tracker-toggle-sublabel">
+                    Explicit content — off by default, anyone with access to this device could see it once enabled
+                  </span>
+                </span>
+                <span className="tracker-toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={settings.positionsEnabled}
+                    onChange={() => onUpdate('positionsEnabled', !settings.positionsEnabled)}
+                  />
+                  <span className="tracker-toggle-track"><span className="tracker-toggle-knob" /></span>
+                </span>
+              </label>
             </div>
           </div>
 
