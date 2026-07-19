@@ -55,6 +55,7 @@ export const CHANGELOG = [
       'Check a revealed position as experienced whenever you feel like it — the date shows right on the card',
       'The Positions tracker is never shared with friends, no matter your tracker visibility settings — it has no shared/read-only view at all',
       'Select mode on the Positions tracker — pick any revealed cards and hide them back under their cover, same Select/confirm pattern as every other tracker',
+      'Positions grid grown from 26 to 106 cards to scratch through',
     ],
   },
   {
