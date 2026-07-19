@@ -49,6 +49,7 @@ export const CHANGELOG = [
       'Explained what Visible/Hidden actually do in the Tracker visibility setting',
       'Moved the Poop tracker\'s Select button off its own row, next to the day\'s sort options — same treatment as the Workout journal',
       'Moved the skincare "+" button from a floating circle at the bottom to a large button at the top of the list — the Category/Type/Product menu now drops down below it instead of growing upward',
+      'Mark a product as empty from its card — it moves into its own Empty section (like Expired), showing the date you emptied it',
     ],
   },
   {

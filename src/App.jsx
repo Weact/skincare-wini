@@ -19,6 +19,7 @@ import { CSS } from '@dnd-kit/utilities'
 import ProductCard from './components/ProductCard'
 import CategorySection from './components/CategorySection'
 import ExpiredSection from './components/ExpiredSection'
+import EmptySection from './components/EmptySection'
 import AuthButton from './components/AuthButton'
 import ChangelogModal from './components/ChangelogModal'
 import SettingsPanel from './components/SettingsPanel'
@@ -649,7 +650,11 @@ export default function App() {
   // computed live from the expiration date, so this stays in sync
   // automatically and reverses itself if the date is edited back.
   const expiredProducts = displayProducts.filter(p => getProductStatus(p).type === 'expired')
-  const groupableProducts = displayProducts.filter(p => getProductStatus(p).type !== 'expired')
+  const emptyProducts = displayProducts.filter(p => getProductStatus(p).type === 'empty')
+  const groupableProducts = displayProducts.filter(p => {
+    const type = getProductStatus(p).type
+    return type !== 'expired' && type !== 'empty'
+  })
   const grouped = groupProducts(groupableProducts, categories)
   const categoryIds = displayCategories.map(c => `cat-${c.id}`)
   const uncategorized = grouped.__none || []
@@ -1040,6 +1045,27 @@ export default function App() {
             {expiredProducts.length > 0 && (
               <ExpiredSection
                 products={expiredProducts}
+                categories={categories}
+                types={types}
+                onCreateType={handleCreateType}
+                events={events}
+                onOpenEvent={handleOpenEvent}
+                onUpdateProduct={updateProduct}
+                onDeleteProduct={handleDeleteProduct}
+                newProductId={newProductId}
+                expandedIds={expandedIds}
+                onToggleExpanded={toggleExpanded}
+                selectMode={selectMode}
+                selectedIds={selectedProductIds}
+                onToggleSelect={toggleProductSelect}
+              />
+            )}
+
+            {/* ── Empty products — virtual section, cuts across categories, always
+                last (after Expired); membership is a user action, not date-derived ── */}
+            {emptyProducts.length > 0 && (
+              <EmptySection
+                products={emptyProducts}
                 categories={categories}
                 types={types}
                 onCreateType={handleCreateType}

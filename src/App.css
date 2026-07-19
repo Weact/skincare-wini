@@ -41,6 +41,10 @@
   --sealed-bg: #edf1f5;
   --sealed-text: #5a6e80;
 
+  --empty: #a39a8f;
+  --empty-bg: #f3efe9;
+  --empty-text: #7a6f60;
+
   --text: #1c1c2e;
   --text-muted: #7a7a8e;
   --text-light: #a8a8bb;
@@ -76,6 +80,10 @@
   --sealed: #7888a0;
   --sealed-bg: #141c2a;
   --sealed-text: #7888a0;
+
+  --empty: #a89a86;
+  --empty-bg: #241f1a;
+  --empty-text: #a89a86;
 
   --text: #ede8f8;
   --text-muted: #8880a8;
@@ -414,7 +422,8 @@ body {
   overflow: hidden;
 }
 
-.card--expired {
+.card--expired,
+.card--empty {
   opacity: 0.72;
 }
 
@@ -484,6 +493,7 @@ body {
 .status-dot--open    { background: var(--sage); }
 .status-dot--expiring { background: var(--amber); }
 .status-dot--expired { background: var(--red); }
+.status-dot--empty   { background: var(--empty); }
 
 /* Product name in header */
 .card-name {
@@ -530,6 +540,7 @@ body {
 .badge--open     { background: var(--sage-bg);     color: var(--sage-text); }
 .badge--expiring { background: var(--amber-bg);    color: var(--amber-text); }
 .badge--expired  { background: var(--red-bg);      color: var(--red-text); }
+.badge--empty    { background: var(--empty-bg);    color: var(--empty-text); }
 
 /* Expand chevron */
 .chevron {
@@ -857,6 +868,34 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 .delete-btn:active {
+  opacity: 0.7;
+}
+
+.empty-toggle-btn {
+  font-size: var(--fz-md);
+  font-family: inherit;
+  font-weight: 500;
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1.5px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  width: 100%;
+  cursor: pointer;
+  min-height: 46px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  margin-top: 2px;
+}
+
+.empty-toggle-btn--active {
+  background: var(--empty-bg);
+  border-color: transparent;
+  color: var(--empty-text);
+  font-weight: 600;
+}
+
+.empty-toggle-btn:active {
   opacity: 0.7;
 }
 
@@ -1686,6 +1725,16 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   background: var(--red-bg);
   border-color: transparent;
   color: var(--red-text);
+}
+
+.cat-section--empty .cat-name {
+  color: var(--empty-text);
+}
+
+.cat-section--empty .cat-count {
+  background: var(--empty-bg);
+  border-color: transparent;
+  color: var(--empty-text);
 }
 
 /* ── Category header ── */

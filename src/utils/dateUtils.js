@@ -59,6 +59,9 @@ export function getDaysUntil(dateStr) {
 }
 
 export function getProductStatus(product) {
+  if (product.emptiedAt) {
+    return { type: 'empty', label: 'Empty' }
+  }
   if (!product.openingDate) {
     return { type: 'sealed', label: 'Sealed' }
   }

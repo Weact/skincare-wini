@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { addMonths, formatDisplayDate, formatEventTime, getProductStatus } from '../utils/dateUtils'
+import { addMonths, formatDisplayDate, formatEventTime, getProductStatus, todayISO } from '../utils/dateUtils'
 import { resizeImage } from '../utils/imageUtils'
 import { TIME_OF_DAY } from '../constants'
 import DateInput from './DateInput'
@@ -163,6 +163,10 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
     }
   }
 
+  function toggleEmpty() {
+    onUpdate({ emptiedAt: product.emptiedAt ? null : todayISO() })
+  }
+
   const status = getProductStatus(product)
   const showBody = expanded && !selectMode
 
@@ -202,8 +206,10 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
                 : <span className="card-name-empty">Unnamed product</span>
               }
             </span>
-            {(product.openingDate || product.expirationDate) && (
+            {(product.emptiedAt || product.openingDate || product.expirationDate) && (
               <span className="card-dates">
+                {product.emptiedAt && `Emptied ${formatDisplayDate(product.emptiedAt)}`}
+                {product.emptiedAt && (product.openingDate || product.expirationDate) && ' · '}
                 {product.openingDate && `Opened ${formatDisplayDate(product.openingDate)}`}
                 {product.openingDate && product.expirationDate && ' · '}
                 {product.expirationDate && `Exp ${formatDisplayDate(product.expirationDate)}`}
@@ -254,6 +260,12 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
               <p className="field-hint">
                 {currentType.emoji ? `${currentType.emoji} ` : ''}{currentType.name}
               </p>
+            </div>
+          )}
+          {product.emptiedAt && (
+            <div className="field">
+              <label className="field-label">Emptied</label>
+              <p className="field-hint">{formatDisplayDate(product.emptiedAt)}</p>
             </div>
           )}
           <div className="field">
@@ -480,6 +492,14 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
               </div>
             </div>
           )}
+
+          <button
+            type="button"
+            className={`empty-toggle-btn${product.emptiedAt ? ' empty-toggle-btn--active' : ''}`}
+            onClick={toggleEmpty}
+          >
+            🫙 {product.emptiedAt ? `Emptied ${formatDisplayDate(product.emptiedAt)} — tap to undo` : 'Mark as empty'}
+          </button>
 
           <button
             className={`delete-btn ${confirmDelete ? 'delete-btn--confirm' : ''}`}

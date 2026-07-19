@@ -5,6 +5,7 @@ import { useCategories } from '../hooks/useCategories'
 import { useTypes } from '../hooks/useTypes'
 import CategorySection from './CategorySection'
 import ExpiredSection from './ExpiredSection'
+import EmptySection from './EmptySection'
 import { getProductStatus } from '../utils/dateUtils'
 
 // Plain read-only product listener — deliberately not useProducts(), which
@@ -59,7 +60,11 @@ export default function SharedSkincareView({ uid }) {
   }
 
   const expiredProducts = products.filter(p => getProductStatus(p).type === 'expired')
-  const groupableProducts = products.filter(p => getProductStatus(p).type !== 'expired')
+  const emptyProducts = products.filter(p => getProductStatus(p).type === 'empty')
+  const groupableProducts = products.filter(p => {
+    const type = getProductStatus(p).type
+    return type !== 'expired' && type !== 'empty'
+  })
   const grouped = groupProducts(groupableProducts, categories)
   const uncategorized = grouped.__none || []
 
@@ -96,6 +101,17 @@ export default function SharedSkincareView({ uid }) {
       {expiredProducts.length > 0 && (
         <ExpiredSection
           products={expiredProducts}
+          categories={categories}
+          types={types}
+          expandedIds={expandedIds}
+          onToggleExpanded={toggleExpanded}
+          readOnly
+        />
+      )}
+
+      {emptyProducts.length > 0 && (
+        <EmptySection
+          products={emptyProducts}
           categories={categories}
           types={types}
           expandedIds={expandedIds}
