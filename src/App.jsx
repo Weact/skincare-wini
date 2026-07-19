@@ -662,7 +662,7 @@ export default function App() {
       <header className="app-header">
         <div className="app-header-top">
           <div className="app-header-left">
-            {mode && (
+            {mode && !viewingProfileCode && (
               <div className="mode-switch" role="tablist" aria-label="Tracker">
                 {TRACKERS.filter(t => settings.enabledTrackers.includes(t.key)).map(t => (
                   <button
@@ -716,7 +716,7 @@ export default function App() {
             <AuthButton user={user} onLinkGoogle={linkWithGoogle} onSignOut={handleSignOut} />
           </div>
         </div>
-        {mode && (
+        {mode && !viewingProfileCode && (
           <span className="app-count">
             {mode === 'workout'
               ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`

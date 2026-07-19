@@ -42,6 +42,7 @@ export const CHANGELOG = [
       'Added a Whitelist visibility option alongside Public/Private — keeps your profile hidden from everyone except the specific codes you add',
       'Whitelisting someone now uses their profile code instead of a raw account ID — the same code everyone already has, generated automatically, never exposes your Firebase account ID',
       'Enter someone else\'s code from the same Settings section to view their shared profile',
+      'Fixed viewing a shared profile getting kicked back to your own trackers when your own tracker switch was tapped — it now stays open until you tap Exit',
       'Moved the skincare "+" button from a floating circle at the bottom to a large button at the top of the list — the Category/Type/Product menu now drops down below it instead of growing upward',
     ],
   },
