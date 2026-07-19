@@ -56,6 +56,7 @@ export default function TypeSection({
   selectMode,
   selectedIds,
   onToggleSelect,
+  readOnly = false,
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -119,7 +120,7 @@ export default function TypeSection({
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
     >
       <div className="type-header">
-        {!editing && (
+        {!editing && !readOnly && (
           <span className="type-drag-handle" {...attributes} {...listeners}>
             <svg width="10" height="14" viewBox="0 0 12 16" fill="none">
               <circle cx="3.5" cy="3" r="1.5" fill="currentColor"/>
@@ -165,49 +166,70 @@ export default function TypeSection({
               </span>
             </button>
 
-            <div className="cat-menu-wrap" ref={menuRef}>
-              {confirmDelete ? (
-                <button className="cat-confirm-delete-btn" onClick={handleDeleteClick}>
-                  Tap to confirm
-                </button>
-              ) : (
-                <button className="cat-menu-btn" onClick={() => setShowMenu(s => !s)}>···</button>
-              )}
-              {showMenu && (
-                <div className="cat-menu">
-                  <button onClick={startEdit}>Rename</button>
-                  <button className="cat-menu-danger" onClick={handleDeleteClick}>Delete</button>
-                </div>
-              )}
-            </div>
+            {!readOnly && (
+              <div className="cat-menu-wrap" ref={menuRef}>
+                {confirmDelete ? (
+                  <button className="cat-confirm-delete-btn" onClick={handleDeleteClick}>
+                    Tap to confirm
+                  </button>
+                ) : (
+                  <button className="cat-menu-btn" onClick={() => setShowMenu(s => !s)}>···</button>
+                )}
+                {showMenu && (
+                  <div className="cat-menu">
+                    <button onClick={startEdit}>Rename</button>
+                    <button className="cat-menu-danger" onClick={handleDeleteClick}>Delete</button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
 
       {!collapsed && (
-        <SortableContext items={productIds} strategy={verticalListSortingStrategy}>
+        readOnly ? (
           <ul className="type-products">
             {products.map(product => (
-              <SortableProductItem
-                key={product.id}
-                product={product}
-                onUpdate={updates => onUpdateProduct(product.id, updates)}
-                onDelete={() => onDeleteProduct(product.id)}
-                startExpanded={product.id === newProductId}
-                expanded={expandedIds.has(product.id)}
-                onToggleExpanded={() => onToggleExpanded(product.id)}
-                categories={categories}
-                types={types}
-                onCreateType={onCreateType}
-                events={events}
-                onOpenEvent={onOpenEvent}
-                selectMode={selectMode}
-                selected={selectedIds?.has(product.id)}
-                onToggleSelect={() => onToggleSelect(product.id)}
-              />
+              <li key={product.id}>
+                <ProductCard
+                  product={product}
+                  expanded={expandedIds.has(product.id)}
+                  onToggleExpanded={() => onToggleExpanded(product.id)}
+                  categories={categories}
+                  types={types}
+                  events={events}
+                  onOpenEvent={onOpenEvent}
+                  readOnly
+                />
+              </li>
             ))}
           </ul>
-        </SortableContext>
+        ) : (
+          <SortableContext items={productIds} strategy={verticalListSortingStrategy}>
+            <ul className="type-products">
+              {products.map(product => (
+                <SortableProductItem
+                  key={product.id}
+                  product={product}
+                  onUpdate={updates => onUpdateProduct(product.id, updates)}
+                  onDelete={() => onDeleteProduct(product.id)}
+                  startExpanded={product.id === newProductId}
+                  expanded={expandedIds.has(product.id)}
+                  onToggleExpanded={() => onToggleExpanded(product.id)}
+                  categories={categories}
+                  types={types}
+                  onCreateType={onCreateType}
+                  events={events}
+                  onOpenEvent={onOpenEvent}
+                  selectMode={selectMode}
+                  selected={selectedIds?.has(product.id)}
+                  onToggleSelect={() => onToggleSelect(product.id)}
+                />
+              ))}
+            </ul>
+          </SortableContext>
+        )
       )}
     </div>
   )

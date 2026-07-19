@@ -39,8 +39,10 @@ import { useWorkouts } from './hooks/useWorkouts'
 import { useSteps } from './hooks/useSteps'
 import { usePoops } from './hooks/usePoops'
 import { useProfile } from './hooks/useProfile'
+import { useFriends } from './hooks/useFriends'
 import WelcomeScreen from './components/WelcomeScreen'
 import SharedProfileView from './components/SharedProfileView'
+import FriendsPanel from './components/FriendsPanel'
 import { resizeImage } from './utils/imageUtils'
 import { getProductStatus } from './utils/dateUtils'
 import { LATEST_VERSION } from './changelog'
@@ -164,15 +166,17 @@ export default function App() {
   const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts(user?.uid)
   const { steps, logSteps } = useSteps(user?.uid)
   const { poops, addPoop, deletePoop, reorderPoops } = usePoops(user?.uid)
-  const { profile, setVisibility, addAllowedViewer, removeAllowedViewer } = useProfile(user?.uid, user?.isAnonymous)
-  const [viewingProfileCode, setViewingProfileCode] = useState(null)
+  const { profile, setVisibility } = useProfile(user?.uid, user?.isAnonymous)
+  const { friends, incoming, outgoing, sendRequest, acceptRequest, declineRequest, cancelRequest, removeFriend, setFriendAlias } = useFriends(user?.uid, profile?.profileCode)
+  const [showFriends, setShowFriends] = useState(false)
+  const [viewingFriend, setViewingFriend] = useState(null) // { uid, label }
 
   // Belt-and-suspenders: Firestore's rules already refuse anonymous reads of
   // shared profiles, but if someone signs out while mid-view (the only way
   // an anonymous session could end up with this state set at all), drop
   // straight back out rather than leave a dead/erroring view on screen.
   useEffect(() => {
-    if (user?.isAnonymous) setViewingProfileCode(null)
+    if (user?.isAnonymous) setViewingFriend(null)
   }, [user?.isAnonymous])
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarTarget, setCalendarTarget] = useState(null)
@@ -662,7 +666,7 @@ export default function App() {
       <header className="app-header">
         <div className="app-header-top">
           <div className="app-header-left">
-            {mode && !viewingProfileCode && (
+            {mode && !viewingFriend && (
               <div className="mode-switch" role="tablist" aria-label="Tracker">
                 {TRACKERS.filter(t => settings.enabledTrackers.includes(t.key)).map(t => (
                   <button
@@ -693,7 +697,7 @@ export default function App() {
                 </svg>
                 {changelogIsNew && <span className="changelog-dot" />}
               </button>
-              {mode && mode !== 'poop' && !viewingProfileCode && (
+              {mode && mode !== 'poop' && !viewingFriend && (
                 <button
                   className="calendar-btn"
                   onClick={() => setShowCalendar(true)}
@@ -706,6 +710,16 @@ export default function App() {
                   </svg>
                 </button>
               )}
+              {user && !user.isAnonymous && !viewingFriend && (
+                <button className="friends-btn" onClick={() => setShowFriends(true)} aria-label="Friends">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <circle cx="9" cy="8" r="3.2" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M16 5.2a3.2 3.2 0 0 1 0 6.2M18.5 14.3c2 .6 3.5 2.7 3.5 5.7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  {incoming.length > 0 && <span className="changelog-dot" />}
+                </button>
+              )}
               <button className="settings-btn" onClick={() => setShowSettings(true)} aria-label="Settings">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
@@ -716,7 +730,7 @@ export default function App() {
             <AuthButton user={user} onLinkGoogle={linkWithGoogle} onSignOut={handleSignOut} />
           </div>
         </div>
-        {mode && !viewingProfileCode && (
+        {mode && !viewingFriend && (
           <span className="app-count">
             {mode === 'workout'
               ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`
@@ -732,8 +746,8 @@ export default function App() {
           <div className="app-loading">
             <div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" />
           </div>
-        ) : viewingProfileCode && !user?.isAnonymous ? (
-          <SharedProfileView code={viewingProfileCode} onExit={() => setViewingProfileCode(null)} />
+        ) : viewingFriend && !user?.isAnonymous ? (
+          <SharedProfileView uid={viewingFriend.uid} label={viewingFriend.label} onExit={() => setViewingFriend(null)} />
         ) : !mode ? (
           <WelcomeScreen onOpenSettings={() => setShowSettings(true)} />
         ) : mode === 'poop' ? (
@@ -1042,12 +1056,23 @@ export default function App() {
           settings={settings}
           onUpdate={updateSetting}
           onClose={() => setShowSettings(false)}
-          user={user}
+        />
+      )}
+      {showFriends && (
+        <FriendsPanel
+          onClose={() => setShowFriends(false)}
           profile={profile}
           onSetVisibility={setVisibility}
-          onAddViewer={addAllowedViewer}
-          onRemoveViewer={removeAllowedViewer}
-          onViewProfile={code => { setViewingProfileCode(code); setShowSettings(false) }}
+          friends={friends}
+          incoming={incoming}
+          outgoing={outgoing}
+          onSendRequest={sendRequest}
+          onAcceptRequest={acceptRequest}
+          onDeclineRequest={declineRequest}
+          onCancelRequest={cancelRequest}
+          onRemoveFriend={removeFriend}
+          onSetAlias={setFriendAlias}
+          onViewFriend={(uid, label) => { setViewingFriend({ uid, label }); setShowFriends(false) }}
         />
       )}
       {showCalendar && (mode === 'workout' ? (

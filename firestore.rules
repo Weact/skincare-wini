@@ -6,40 +6,86 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
-    // True if `userId` currently shares their Workouts/Poop data with the
-    // requester — either Public (any signed-in, non-anonymous account) or
-    // Whitelist (the requester's uid is explicitly listed on the owner's
-    // profile). Private falls through to false.
-    function ownerSharesWith(userId) {
-      let owner = get(/databases/$(database)/documents/users/$(userId)).data;
-      return owner.profileVisibility == 'public'
-        || (owner.profileVisibility == 'whitelist' && request.auth.uid in owner.get('allowedViewerUids', []));
+    // Friendship is symmetric by construction (accepting a request always
+    // writes both users/{A}/friends/{B} and users/{B}/friends/{A} together),
+    // so checking the owner's own friends subcollection for the requester's
+    // uid is enough — no separate "friendship" document needed.
+    function isFriend(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)/friends/$(request.auth.uid));
+    }
+
+    // True if there's a still-pending request from `userId` to `friendUid` —
+    // the condition that justifies `friendUid` writing themselves into
+    // `userId`'s friend list as part of accepting it.
+    function hasPendingRequest(userId, friendUid) {
+      let req = get(/databases/$(database)/documents/friendRequests/$(userId + '_' + friendUid)).data;
+      return req.from == userId && req.to == friendUid && req.status == 'pending';
     }
 
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Public/whitelist read-only access to a user's workouts + poops. The
-    // owner-only rule above still applies independently; Firestore grants
-    // access if either rule allows it.
+    // Friend-only read-only access to a user's trackers. The owner-only rule
+    // above still applies independently; Firestore grants access if either
+    // rule allows it.
     match /users/{userId}/workouts/{workoutId} {
-      allow read: if isSignedInNonAnonymous() && ownerSharesWith(userId);
+      allow read: if isSignedInNonAnonymous() && isFriend(userId);
     }
 
     match /users/{userId}/poops/{poopId} {
-      allow read: if isSignedInNonAnonymous() && ownerSharesWith(userId);
+      allow read: if isSignedInNonAnonymous() && isFriend(userId);
     }
 
-    // Lets a viewer read the owner's profile doc directly (for the
-    // shared-profile page itself), without needing the owner's own uid
+    match /users/{userId}/categories/{categoryId} {
+      allow read: if isSignedInNonAnonymous() && isFriend(userId);
+    }
+
+    match /users/{userId}/types/{typeId} {
+      allow read: if isSignedInNonAnonymous() && isFriend(userId);
+    }
+
+    match /users/{userId}/products/{productId} {
+      allow read: if isSignedInNonAnonymous() && isFriend(userId);
+    }
+
+    // Lets a friend read the owner's profile doc directly (for the shared
+    // profile page's header), without needing anything beyond friendship.
     match /users/{userId} {
-      allow read: if isSignedInNonAnonymous() && ownerSharesWith(userId);
+      allow read: if isSignedInNonAnonymous() && isFriend(userId);
     }
 
-    // code -> uid lookup for resolving a share code to its owner. Doubles as
-    // the lookup for adding someone to a whitelist — same code, same
-    // collection, since it's just "who does this code belong to" either way.
+    // Each user's own friend list — { [friendUid]: { code, alias, since } }.
+    // Reading/editing/removing your own entries is covered by the owner
+    // rule above. The two extra grants here exist only to make *accepting* a
+    // request work without a server: the acceptor (friendUid) needs to write
+    // themselves into the sender's (userId's) list too, and either side
+    // needs to be able to remove themselves from the other's list to
+    // unfriend instantly without requiring the other person to also act.
+    match /users/{userId}/friends/{friendUid} {
+      allow create: if isSignedInNonAnonymous() && request.auth.uid == friendUid
+        && hasPendingRequest(userId, friendUid);
+      allow delete: if request.auth != null && request.auth.uid == friendUid;
+    }
+
+    // Friend requests, doc id "{fromUid}_{toUid}" — lets either side query
+    // just their half (where('to'/'from', '==', myUid)) without needing a
+    // broader rule Firestore can't validate against a list query.
+    match /friendRequests/{requestId} {
+      allow read: if request.auth != null
+        && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
+      allow create: if isSignedInNonAnonymous()
+        && request.auth.uid == request.resource.data.from
+        && request.resource.data.to != request.auth.uid
+        && request.resource.data.status == 'pending'
+        && requestId == request.resource.data.from + '_' + request.resource.data.to
+        && get(/databases/$(database)/documents/users/$(request.resource.data.to)).data.get('profileVisibility', 'private') == 'public';
+      allow delete: if request.auth != null
+        && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
+    }
+
+    // code -> uid lookup for resolving a friend code, both to send a
+    // request and to display a friend's code before an alias is set.
     match /profileCodes/{code} {
       allow read: if isSignedInNonAnonymous();
       allow create: if isSignedInNonAnonymous() && request.resource.data.uid == request.auth.uid;

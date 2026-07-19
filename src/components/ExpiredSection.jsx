@@ -20,6 +20,7 @@ export default function ExpiredSection({
   selectMode,
   selectedIds,
   onToggleSelect,
+  readOnly = false,
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -57,6 +58,7 @@ export default function ExpiredSection({
                 selectMode={selectMode}
                 selected={selectedIds?.has(product.id)}
                 onToggleSelect={() => onToggleSelect(product.id)}
+                readOnly={readOnly}
               />
             </li>
           ))}

@@ -70,6 +70,7 @@ export default function CategorySection({
   selectMode,
   selectedIds,
   onToggleSelect,
+  readOnly = false,
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -132,7 +133,7 @@ export default function CategorySection({
     <div className={`cat-section${isUncategorized ? ' cat-section--uncategorized' : ''}`}>
       <div className="cat-header">
         {/* Drag handle — only for real categories */}
-        {!isUncategorized && dragHandleProps && (
+        {!isUncategorized && dragHandleProps && !readOnly && (
           <span className="cat-drag-handle" {...dragHandleProps}>
             <svg width="12" height="16" viewBox="0 0 12 16" fill="none">
               <circle cx="3.5" cy="3" r="1.5" fill="currentColor"/>
@@ -185,7 +186,7 @@ export default function CategorySection({
               </span>
             </button>
 
-            {!isUncategorized && (
+            {!isUncategorized && !readOnly && (
               <div className="cat-menu-wrap" ref={menuRef}>
                 {confirmDelete ? (
                   <button className="cat-confirm-delete-btn" onClick={handleDeleteClick}>
@@ -209,55 +210,92 @@ export default function CategorySection({
       {!collapsed && (
         <div className="cat-body">
           {!isUncategorized && types.length > 0 && (
-            <SortableContext items={typeIds} strategy={verticalListSortingStrategy}>
-              {types.map(type => (
+            readOnly ? (
+              types.map(type => (
                 <TypeSection
                   key={type.id}
                   type={type}
                   products={grouped[type.id] || []}
                   categories={categories}
                   types={types}
-                  onCreateType={onCreateType}
                   events={events}
                   onOpenEvent={onOpenEvent}
-                  onUpdateProduct={onUpdateProduct}
-                  onDeleteProduct={onDeleteProduct}
-                  onUpdateType={onUpdateType}
-                  onDeleteType={onDeleteType}
                   newProductId={newProductId}
                   expandedIds={expandedIds}
                   onToggleExpanded={onToggleExpanded}
-                  selectMode={selectMode}
-                  selectedIds={selectedIds}
-                  onToggleSelect={onToggleSelect}
+                  readOnly
                 />
-              ))}
-            </SortableContext>
+              ))
+            ) : (
+              <SortableContext items={typeIds} strategy={verticalListSortingStrategy}>
+                {types.map(type => (
+                  <TypeSection
+                    key={type.id}
+                    type={type}
+                    products={grouped[type.id] || []}
+                    categories={categories}
+                    types={types}
+                    onCreateType={onCreateType}
+                    events={events}
+                    onOpenEvent={onOpenEvent}
+                    onUpdateProduct={onUpdateProduct}
+                    onDeleteProduct={onDeleteProduct}
+                    onUpdateType={onUpdateType}
+                    onDeleteType={onDeleteType}
+                    newProductId={newProductId}
+                    expandedIds={expandedIds}
+                    onToggleExpanded={onToggleExpanded}
+                    selectMode={selectMode}
+                    selectedIds={selectedIds}
+                    onToggleSelect={onToggleSelect}
+                  />
+                ))}
+              </SortableContext>
+            )
           )}
 
-          <SortableContext items={untypedIds} strategy={verticalListSortingStrategy}>
+          {readOnly ? (
             <ul className="cat-products">
               {untyped.map(product => (
-                <SortableProductItem
-                  key={product.id}
-                  product={product}
-                  onUpdate={updates => onUpdateProduct(product.id, updates)}
-                  onDelete={() => onDeleteProduct(product.id)}
-                  startExpanded={product.id === newProductId}
-                  expanded={expandedIds.has(product.id)}
-                  onToggleExpanded={() => onToggleExpanded(product.id)}
-                  categories={categories}
-                  types={types}
-                  onCreateType={onCreateType}
-                  events={events}
-                  onOpenEvent={onOpenEvent}
-                  selectMode={selectMode}
-                  selected={selectedIds?.has(product.id)}
-                  onToggleSelect={() => onToggleSelect(product.id)}
-                />
+                <li key={product.id}>
+                  <ProductCard
+                    product={product}
+                    expanded={expandedIds.has(product.id)}
+                    onToggleExpanded={() => onToggleExpanded(product.id)}
+                    categories={categories}
+                    types={types}
+                    events={events}
+                    onOpenEvent={onOpenEvent}
+                    readOnly
+                  />
+                </li>
               ))}
             </ul>
-          </SortableContext>
+          ) : (
+            <SortableContext items={untypedIds} strategy={verticalListSortingStrategy}>
+              <ul className="cat-products">
+                {untyped.map(product => (
+                  <SortableProductItem
+                    key={product.id}
+                    product={product}
+                    onUpdate={updates => onUpdateProduct(product.id, updates)}
+                    onDelete={() => onDeleteProduct(product.id)}
+                    startExpanded={product.id === newProductId}
+                    expanded={expandedIds.has(product.id)}
+                    onToggleExpanded={() => onToggleExpanded(product.id)}
+                    categories={categories}
+                    types={types}
+                    onCreateType={onCreateType}
+                    events={events}
+                    onOpenEvent={onOpenEvent}
+                    selectMode={selectMode}
+                    selected={selectedIds?.has(product.id)}
+                    onToggleSelect={() => onToggleSelect(product.id)}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          )}
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { doc, onSnapshot, setDoc, getDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
+import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 
 // Excludes 0/O, 1/I/L — easy to mix up when someone's reading the code out
@@ -17,17 +17,13 @@ function generateCode() {
 
 // The current user's own sharing profile — a `users/{uid}` root doc (as
 // opposed to its subcollections), holding:
-//  - profileVisibility ('private' | 'public' | 'whitelist')
-//  - profileCode — one stable code that identifies this user both ways:
-//    someone enters it to view this profile (if Public, or if they're on
-//    the Whitelist), and it's also what this user hands to someone else so
-//    *that* person can add them to *their own* whitelist. Generated once,
-//    unconditionally, regardless of this user's own visibility setting —
-//    a Private user still needs a code to give out for other people's
-//    whitelists even though nobody can view their own data with it.
-//  - allowedViewerUids — real uids, resolved from profile codes at the
-//    point they're added (the Firestore rule checks request.auth.uid
-//    against this array directly, so it has to hold actual uids, not codes)
+//  - profileVisibility ('private' | 'public') — gates whether other people
+//    can send this user a friend request at all. It has no bearing on
+//    viewing once a friend request is accepted — see useFriends for that.
+//  - profileCode ("friend code") — one stable code that identifies this
+//    user, entered by someone else to send them a friend request. Generated
+//    once, unconditionally, regardless of visibility — a Private user still
+//    needs a code to hand out for when they flip back to Public later.
 export function useProfile(userId, isAnonymous) {
   const [profile, setProfile] = useState(null)
   const codeClaimStarted = useRef(false)
@@ -78,27 +74,10 @@ export function useProfile(userId, isAnonymous) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, isAnonymous, profile])
 
-  // visibility: 'private' | 'public' | 'whitelist'
+  // visibility: 'private' | 'public'
   async function setVisibility(visibility) {
     await setDoc(doc(db, 'users', userId), { profileVisibility: visibility }, { merge: true })
   }
 
-  // Resolves the other person's code to their uid before storing it — the
-  // whitelist array itself must hold real uids for the security rule's
-  // `request.auth.uid in allowedViewerUids` check to work.
-  async function addAllowedViewer(code) {
-    const trimmed = code.trim().toUpperCase()
-    if (!trimmed) return
-    const codeSnap = await getDoc(doc(db, 'profileCodes', trimmed))
-    if (!codeSnap.exists()) throw new Error('not-found')
-    await setDoc(doc(db, 'users', userId), {
-      allowedViewerUids: arrayUnion(codeSnap.data().uid),
-    }, { merge: true })
-  }
-
-  async function removeAllowedViewer(viewerUid) {
-    await setDoc(doc(db, 'users', userId), { allowedViewerUids: arrayRemove(viewerUid) }, { merge: true })
-  }
-
-  return { profile, setVisibility, addAllowedViewer, removeAllowedViewer }
+  return { profile, setVisibility }
 }

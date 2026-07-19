@@ -14,7 +14,7 @@ const USAGE_OPTIONS = [
   { value: 24, label: '24 months' },
 ]
 
-export default function ProductCard({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories = [], types = [], onCreateType, events = [], onOpenEvent, dragHandleProps, selectMode = false, selected = false, onToggleSelect }) {
+export default function ProductCard({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories = [], types = [], onCreateType, events = [], onOpenEvent, dragHandleProps, selectMode = false, selected = false, onToggleSelect, readOnly = false }) {
   const [name, setName] = useState(product.name || '')
   const [suggestion, setSuggestion] = useState(null)
   const [dismissedKey, setDismissedKey] = useState(null)
@@ -232,7 +232,42 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
         </div>
       </div>
 
-      {showBody && (
+      {showBody && readOnly && (
+        <div className="card-body">
+          {product.photo && (
+            <div className="field">
+              <label className="field-label">Photo</label>
+              <img src={product.photo} className="photo-img" alt="Product" />
+            </div>
+          )}
+          {product.categoryId && (
+            <div className="field">
+              <label className="field-label">Category</label>
+              <p className="field-hint">
+                {categories.find(c => c.id === product.categoryId)?.name || '—'}
+              </p>
+            </div>
+          )}
+          {currentType && (
+            <div className="field">
+              <label className="field-label">Type</label>
+              <p className="field-hint">
+                {currentType.emoji ? `${currentType.emoji} ` : ''}{currentType.name}
+              </p>
+            </div>
+          )}
+          <div className="field">
+            <label className="field-label">Opening date</label>
+            <p className="field-hint">{product.openingDate ? formatDisplayDate(product.openingDate) : 'Not set'}</p>
+          </div>
+          <div className="field">
+            <label className="field-label">Expiration date</label>
+            <p className="field-hint">{product.expirationDate ? formatDisplayDate(product.expirationDate) : 'Not set'}</p>
+          </div>
+        </div>
+      )}
+
+      {showBody && !readOnly && (
         <div className="card-body">
           <div className="field">
             <label className="field-label">Photo</label>
