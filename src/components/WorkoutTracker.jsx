@@ -121,6 +121,7 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showStepsGraph, setShowStepsGraph] = useState(false)
+  const [summaryPeriod, setSummaryPeriod] = useState('week')
 
   function toggleSelectMode() {
     setSelectMode(s => !s)
@@ -223,13 +224,15 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
   }
 
   const pastStepDates = Object.keys(stepsByDate).filter(d => d <= today)
-  // Days elapsed so far in the current week (Monday = 1), so an early-week
+  const monthStart = `${currentMonthKey}-01`
+  // Days elapsed so far in the period (today counts), so an early-period
   // average isn't dragged down by days that haven't happened yet
   const weekElapsedDays = Math.min(7, Math.max(1,
     Math.floor((new Date(today + 'T00:00:00') - new Date(weekStart + 'T00:00:00')) / 86400000) + 1
   ))
+  const monthElapsedDays = new Date(today + 'T00:00:00').getDate()
   const week = summarize(thisWeek, pastStepDates.filter(d => d >= weekStart), weekElapsedDays)
-  const month = summarize(thisMonth, pastStepDates.filter(d => d.slice(0, 7) === currentMonthKey))
+  const month = summarize(thisMonth, pastStepDates.filter(d => d.slice(0, 7) === currentMonthKey), monthElapsedDays)
 
   // Steps quick logger — defaults to today but can target any past day;
   // the draft stays in sync with whichever date is currently selected
@@ -246,13 +249,10 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
     if (val > 0) onStepsLogged?.()
   }
 
-  function summarySub(s, { avg = false } = {}) {
+  function workoutSub(s) {
     return [
       s.minutes > 0 ? `${s.minutes} min` : null,
       s.calories > 0 ? `${s.calories} kcal` : null,
-      avg
-        ? (s.stepsAvg > 0 ? `${s.stepsAvg.toLocaleString('en-US')} avg steps` : null)
-        : (s.steps > 0 ? `${s.steps.toLocaleString('en-US')} steps` : null),
     ].filter(Boolean).join(' · ')
   }
 
@@ -270,35 +270,53 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
       sublabel: [formatDisplayDate(w.date), w.time ? formatEventTime(w.time) : null].filter(Boolean).join(' · '),
     }))
 
+  const activeSummary = summaryPeriod === 'week' ? week : month
+  const periodLabel = summaryPeriod === 'week' ? 'This week' : 'This month'
+
   return (
     <>
       {(week.count > 0 || month.count > 0 || week.steps > 0 || month.steps > 0) && (
-        <div className="wk-summary-row">
-          {week.steps > 0 ? (
-            <button type="button" className="wk-summary-tile wk-summary-tile--btn" onClick={() => setShowStepsGraph(true)}>
-              <span className="wk-summary-title">💪 This week</span>
-              <span className="wk-summary-main">
-                {week.count} workout{week.count === 1 ? '' : 's'}
-              </span>
-              {summarySub(week, { avg: true }) && <span className="wk-summary-sub">{summarySub(week, { avg: true })}</span>}
+        <>
+          <div className="wk-period-toggle">
+            <button
+              type="button"
+              className={`wk-period-btn${summaryPeriod === 'week' ? ' wk-period-btn--active' : ''}`}
+              onClick={() => setSummaryPeriod('week')}
+            >
+              Week
             </button>
-          ) : (
-            <div className="wk-summary-tile">
-              <span className="wk-summary-title">💪 This week</span>
-              <span className="wk-summary-main">
-                {week.count} workout{week.count === 1 ? '' : 's'}
-              </span>
-              {summarySub(week, { avg: true }) && <span className="wk-summary-sub">{summarySub(week, { avg: true })}</span>}
-            </div>
-          )}
-          <div className="wk-summary-tile">
-            <span className="wk-summary-title">🗓️ This month</span>
-            <span className="wk-summary-main">
-              {month.count} workout{month.count === 1 ? '' : 's'}
-            </span>
-            {summarySub(month) && <span className="wk-summary-sub">{summarySub(month)}</span>}
+            <button
+              type="button"
+              className={`wk-period-btn${summaryPeriod === 'month' ? ' wk-period-btn--active' : ''}`}
+              onClick={() => setSummaryPeriod('month')}
+            >
+              Month
+            </button>
           </div>
-        </div>
+          <div className="wk-summary-row">
+            <div className="wk-summary-tile">
+              <span className="wk-summary-title">🏋️ {periodLabel}</span>
+              <span className="wk-summary-main">
+                {activeSummary.count} workout{activeSummary.count === 1 ? '' : 's'}
+              </span>
+              {workoutSub(activeSummary) && <span className="wk-summary-sub">{workoutSub(activeSummary)}</span>}
+            </div>
+            {activeSummary.steps > 0 ? (
+              <button type="button" className="wk-summary-tile wk-summary-tile--btn" onClick={() => setShowStepsGraph(true)}>
+                <span className="wk-summary-title">👟 Steps</span>
+                <span className="wk-summary-main">
+                  {activeSummary.steps.toLocaleString('en-US')} steps
+                </span>
+                <span className="wk-summary-sub">{activeSummary.stepsAvg.toLocaleString('en-US')} avg/day</span>
+              </button>
+            ) : (
+              <div className="wk-summary-tile">
+                <span className="wk-summary-title">👟 Steps</span>
+                <span className="wk-summary-main">No steps logged</span>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {!readOnly && (
@@ -467,7 +485,8 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
 
       {showStepsGraph && (
         <StepsGraphModal
-          weekStart={weekStart}
+          period={summaryPeriod}
+          periodStart={summaryPeriod === 'week' ? weekStart : monthStart}
           today={today}
           stepsByDate={stepsByDate}
           onClose={() => setShowStepsGraph(false)}

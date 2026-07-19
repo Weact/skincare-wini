@@ -62,8 +62,8 @@ export const CHANGELOG = [
       '"Add a friend" is now a button that opens a popup for the code, instead of an always-visible input field',
       'Fixed Positions cards scratching while scrolling on mobile — a swipe now commits to either scrolling or scratching, never both, and scratching itself reveals faster',
       'Fixed holding down on a Positions card triggering the phone\'s native text-selection/callout menu',
-      'The "This week" tile now shows your average daily steps instead of the raw total',
-      'Tap the "This week" tile to open a bar graph of steps for each day of the week',
+      'Workout summary split into its own Workouts and Steps tiles, with a Week/Month switch above them',
+      'Tap the Steps tile to open a bar graph of steps for each day of the week or month',
     ],
   },
   {

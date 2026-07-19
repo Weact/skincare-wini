@@ -2920,6 +2920,32 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 /* ── Workout tracker ── */
+.wk-period-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.wk-period-btn {
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wk-period-btn--active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
 .wk-summary-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2993,6 +3019,19 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   align-items: flex-end;
   gap: 8px;
   height: 160px;
+}
+
+.steps-graph-bars--dense {
+  gap: 2px;
+}
+
+.steps-graph-bars--dense .steps-graph-day {
+  font-size: 8px;
+}
+
+.steps-graph-bars--dense .steps-graph-bar {
+  min-width: 3px;
+  border-radius: 2px 2px 0 0;
 }
 
 .steps-graph-col {
