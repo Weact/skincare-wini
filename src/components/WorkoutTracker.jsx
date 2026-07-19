@@ -6,6 +6,7 @@ import WorkoutCard from './WorkoutCard'
 import DateInput from './DateInput'
 import SelectionBar from './SelectionBar'
 import DeleteConfirmModal from './DeleteConfirmModal'
+import StepsGraphModal from './StepsGraphModal'
 
 // dirLabels spell the order out on the active chip, since bare arrows are
 // read two opposite ways; the arrow itself follows the spreadsheet
@@ -119,6 +120,7 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showStepsGraph, setShowStepsGraph] = useState(false)
 
   function toggleSelectMode() {
     setSelectMode(s => !s)
@@ -209,17 +211,24 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
   const stepsByDate = {}
   steps.forEach(s => { stepsByDate[s.date] = s.count })
 
-  function summarize(list, stepDates) {
+  function summarize(list, stepDates, avgDivisor) {
+    const stepsTotal = stepDates.reduce((sum, d) => sum + (stepsByDate[d] || 0), 0)
     return {
       count: list.length,
       minutes: list.reduce((sum, w) => sum + (w.duration || 0), 0),
       calories: list.reduce((sum, w) => sum + (w.calories || 0), 0),
-      steps: stepDates.reduce((sum, d) => sum + (stepsByDate[d] || 0), 0),
+      steps: stepsTotal,
+      stepsAvg: avgDivisor ? Math.round(stepsTotal / avgDivisor) : 0,
     }
   }
 
   const pastStepDates = Object.keys(stepsByDate).filter(d => d <= today)
-  const week = summarize(thisWeek, pastStepDates.filter(d => d >= weekStart))
+  // Days elapsed so far in the current week (Monday = 1), so an early-week
+  // average isn't dragged down by days that haven't happened yet
+  const weekElapsedDays = Math.min(7, Math.max(1,
+    Math.floor((new Date(today + 'T00:00:00') - new Date(weekStart + 'T00:00:00')) / 86400000) + 1
+  ))
+  const week = summarize(thisWeek, pastStepDates.filter(d => d >= weekStart), weekElapsedDays)
   const month = summarize(thisMonth, pastStepDates.filter(d => d.slice(0, 7) === currentMonthKey))
 
   // Steps quick logger — defaults to today but can target any past day;
@@ -237,11 +246,13 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
     if (val > 0) onStepsLogged?.()
   }
 
-  function summarySub(s) {
+  function summarySub(s, { avg = false } = {}) {
     return [
       s.minutes > 0 ? `${s.minutes} min` : null,
       s.calories > 0 ? `${s.calories} kcal` : null,
-      s.steps > 0 ? `${s.steps.toLocaleString('en-US')} steps` : null,
+      avg
+        ? (s.stepsAvg > 0 ? `${s.stepsAvg.toLocaleString('en-US')} avg steps` : null)
+        : (s.steps > 0 ? `${s.steps.toLocaleString('en-US')} steps` : null),
     ].filter(Boolean).join(' · ')
   }
 
@@ -263,13 +274,23 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
     <>
       {(week.count > 0 || month.count > 0 || week.steps > 0 || month.steps > 0) && (
         <div className="wk-summary-row">
-          <div className="wk-summary-tile">
-            <span className="wk-summary-title">💪 This week</span>
-            <span className="wk-summary-main">
-              {week.count} workout{week.count === 1 ? '' : 's'}
-            </span>
-            {summarySub(week) && <span className="wk-summary-sub">{summarySub(week)}</span>}
-          </div>
+          {week.steps > 0 ? (
+            <button type="button" className="wk-summary-tile wk-summary-tile--btn" onClick={() => setShowStepsGraph(true)}>
+              <span className="wk-summary-title">💪 This week</span>
+              <span className="wk-summary-main">
+                {week.count} workout{week.count === 1 ? '' : 's'}
+              </span>
+              {summarySub(week, { avg: true }) && <span className="wk-summary-sub">{summarySub(week, { avg: true })}</span>}
+            </button>
+          ) : (
+            <div className="wk-summary-tile">
+              <span className="wk-summary-title">💪 This week</span>
+              <span className="wk-summary-main">
+                {week.count} workout{week.count === 1 ? '' : 's'}
+              </span>
+              {summarySub(week, { avg: true }) && <span className="wk-summary-sub">{summarySub(week, { avg: true })}</span>}
+            </div>
+          )}
           <div className="wk-summary-tile">
             <span className="wk-summary-title">🗓️ This month</span>
             <span className="wk-summary-main">
@@ -441,6 +462,15 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
           items={selectedItems}
           onConfirm={confirmBulkDelete}
           onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+
+      {showStepsGraph && (
+        <StepsGraphModal
+          weekStart={weekStart}
+          today={today}
+          stepsByDate={stepsByDate}
+          onClose={() => setShowStepsGraph(false)}
         />
       )}
     </>

@@ -2956,6 +2956,92 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   color: var(--text-muted);
 }
 
+.wk-summary-tile--btn {
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+
+.wk-summary-tile--btn:hover,
+.wk-summary-tile--btn:active {
+  filter: brightness(0.96);
+}
+
+/* ── Steps graph modal ── */
+.steps-graph-avg {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.steps-graph-avg-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.steps-graph-avg-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.steps-graph-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 160px;
+}
+
+.steps-graph-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  gap: 4px;
+}
+
+.steps-graph-value {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.steps-graph-bar-track {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.steps-graph-bar {
+  width: 60%;
+  min-width: 10px;
+  background: var(--primary);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.25s ease;
+}
+
+.steps-graph-bar--future {
+  background: var(--border);
+}
+
+.steps-graph-day {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.steps-graph-col--today .steps-graph-day {
+  color: var(--primary);
+  font-weight: 700;
+}
+
 /* Calories input + Auto-estimate button */
 .wk-cal-row {
   display: flex;
