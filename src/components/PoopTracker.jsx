@@ -247,15 +247,6 @@ export default function PoopTracker({ poops, addPoop, deletePoop, reorderPoops, 
 
   return (
     <div className="poop-tracker">
-      {!readOnly && (
-        <SelectionBar
-          selectMode={selectMode}
-          count={selectedIds.size}
-          onToggle={toggleSelectMode}
-          onDeleteClick={() => setShowDeleteConfirm(true)}
-        />
-      )}
-
       {monthAverage !== null && (
         <div className="wk-summary-row poop-summary-row">
           <div className="wk-summary-tile">
@@ -316,48 +307,61 @@ export default function PoopTracker({ poops, addPoop, deletePoop, reorderPoops, 
           <div className="cal-day-heading">
             {selectedDate === today ? 'Today' : formatDayHeading(selectedDate)}
           </div>
-          {dayEntries.length > 1 && (
-            <div className="cal-sort-row">
-              <span className="cal-sort-label">Sort</span>
-              {SORT_OPTIONS.map(opt => {
-                const active = sortBy === opt.key
-                return (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    className={`cal-sort-btn${active ? ' cal-sort-btn--active' : ''}`}
-                    onClick={() => handleSortClick(opt.key)}
-                  >
-                    {opt.label}
-                    {active && (
-                      <span className="cal-sort-arrow">
-                        {sortDir === 'asc' ? '↑' : '↓'} {opt.dirLabels[sortDir]}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-              {!readOnly && (
-                <button
-                  type="button"
-                  className={`cal-sort-btn${sortBy === 'custom' ? ' cal-sort-btn--active' : ''}`}
-                  onClick={() => handleSortClick('custom')}
-                >
-                  Custom
-                </button>
-              )}
-              {(sortBy !== 'time' || sortDir !== 'asc') && (
-                <button
-                  type="button"
-                  className="cal-sort-btn cal-sort-reset"
-                  onClick={() => { setSortBy('time'); setSortDir('asc') }}
-                >
-                  ✕ Reset
-                </button>
-              )}
-            </div>
-          )}
         </div>
+
+        {(!readOnly || dayEntries.length > 1) && (
+          <div className="list-toolbar-row">
+            {!readOnly && (
+              <SelectionBar
+                selectMode={selectMode}
+                count={selectedIds.size}
+                onToggle={toggleSelectMode}
+                onDeleteClick={() => setShowDeleteConfirm(true)}
+              />
+            )}
+            {dayEntries.length > 1 && (
+              <div className="cal-sort-row">
+                <span className="cal-sort-label">Sort</span>
+                {SORT_OPTIONS.map(opt => {
+                  const active = sortBy === opt.key
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      className={`cal-sort-btn${active ? ' cal-sort-btn--active' : ''}`}
+                      onClick={() => handleSortClick(opt.key)}
+                    >
+                      {opt.label}
+                      {active && (
+                        <span className="cal-sort-arrow">
+                          {sortDir === 'asc' ? '↑' : '↓'} {opt.dirLabels[sortDir]}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+                {!readOnly && (
+                  <button
+                    type="button"
+                    className={`cal-sort-btn${sortBy === 'custom' ? ' cal-sort-btn--active' : ''}`}
+                    onClick={() => handleSortClick('custom')}
+                  >
+                    Custom
+                  </button>
+                )}
+                {(sortBy !== 'time' || sortDir !== 'asc') && (
+                  <button
+                    type="button"
+                    className="cal-sort-btn cal-sort-reset"
+                    onClick={() => { setSortBy('time'); setSortDir('asc') }}
+                  >
+                    ✕ Reset
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {dayEntries.length === 0 ? (
           <p className="cal-empty">Nothing logged</p>

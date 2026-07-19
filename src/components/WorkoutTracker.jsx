@@ -314,7 +314,7 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
       ))}
 
       {(!readOnly || workouts.length > 1) && (
-        <div className="wk-toolbar-row">
+        <div className="list-toolbar-row">
           {!readOnly && (
             <SelectionBar
               selectMode={selectMode}

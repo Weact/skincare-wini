@@ -46,6 +46,8 @@ export const CHANGELOG = [
       'Unfriending someone removes them from both friend lists instantly, no confirmation needed from the other side',
       'Your tracker switch stays visible and tappable while the Friends menu is open, so you can jump straight to a tracker without closing it first',
       'New Tracker visibility setting in the Friends menu — choose one visibility for all trackers, or customize Skincare/Workouts/Poop separately, controlling what friends can see once they\'re added',
+      'Explained what Visible/Hidden actually do in the Tracker visibility setting',
+      'Moved the Poop tracker\'s Select button off its own row, next to the day\'s sort options — same treatment as the Workout journal',
       'Moved the skincare "+" button from a floating circle at the bottom to a large button at the top of the list — the Category/Type/Product menu now drops down below it instead of growing upward',
     ],
   },

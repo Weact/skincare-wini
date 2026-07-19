@@ -58,14 +58,22 @@ export function useFriends(userId, myCode) {
     if (targetUid === userId) throw new Error('self')
     if (friends.some(f => f.uid === targetUid)) throw new Error('already-friends')
     if (outgoing.some(r => r.to === targetUid)) throw new Error('already-sent')
-    await setDoc(doc(db, 'friendRequests', requestId(userId, targetUid)), {
-      from: userId,
-      to: targetUid,
-      fromCode: myCode,
-      toCode: trimmed,
-      status: 'pending',
-      createdAt: serverTimestamp(),
-    })
+    try {
+      await setDoc(doc(db, 'friendRequests', requestId(userId, targetUid)), {
+        from: userId,
+        to: targetUid,
+        fromCode: myCode,
+        toCode: trimmed,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      })
+    } catch (err) {
+      // The rules require the target to currently be Public — the most
+      // likely reason this specific write gets rejected when everything
+      // above already checked out client-side.
+      if (err.code === 'permission-denied') throw new Error('not-accepting')
+      throw err
+    }
   }
 
   // `request` is an incoming request object ({ id, from, fromCode, ... }).

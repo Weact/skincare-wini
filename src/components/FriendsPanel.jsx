@@ -6,6 +6,7 @@ const SEND_ERRORS = {
   'self': "That's your own code",
   'already-friends': "You're already friends",
   'already-sent': 'Request already sent',
+  'not-accepting': "That person isn't accepting friend requests right now (they're set to Private)",
 }
 
 // Friend system panel: privacy toggle, your own friend code, sending/
@@ -104,49 +105,59 @@ export default function FriendsPanel({ onClose, profile, onSetVisibility, onSetT
         </div>
 
         {trackerVisibilityMode === 'global' ? (
-          <div className="tracker-vis-toggle tracker-vis-toggle--global">
-            <button
-              type="button"
-              className={`tracker-vis-btn${allTrackersVisible ? ' tracker-vis-btn--active' : ''}`}
-              onClick={() => onSetAllTrackerVisibility(true)}
-            >
-              Visible
-            </button>
-            <button
-              type="button"
-              className={`tracker-vis-btn${allTrackersHidden ? ' tracker-vis-btn--active' : ''}`}
-              onClick={() => onSetAllTrackerVisibility(false)}
-            >
-              Hidden
-            </button>
-          </div>
+          <>
+            <div className="tracker-vis-toggle tracker-vis-toggle--global">
+              <button
+                type="button"
+                className={`tracker-vis-btn${allTrackersVisible ? ' tracker-vis-btn--active' : ''}`}
+                onClick={() => onSetAllTrackerVisibility(true)}
+              >
+                Visible
+              </button>
+              <button
+                type="button"
+                className={`tracker-vis-btn${allTrackersHidden ? ' tracker-vis-btn--active' : ''}`}
+                onClick={() => onSetAllTrackerVisibility(false)}
+              >
+                Hidden
+              </button>
+            </div>
+            <div className="field-hint">
+              Visible — friends can open this tracker on your shared profile. Hidden — it's left out entirely, as if it didn't exist.
+            </div>
+          </>
         ) : (
-          <div className="tracker-visibility-list">
-            {TRACKERS.map(t => {
-              const visible = isTrackerVisible(t.key)
-              return (
-                <div key={t.key} className="tracker-visibility-row">
-                  <span className="tracker-visibility-label">{t.icon} {t.label}</span>
-                  <div className="tracker-vis-toggle">
-                    <button
-                      type="button"
-                      className={`tracker-vis-btn${visible ? ' tracker-vis-btn--active' : ''}`}
-                      onClick={() => onSetTrackerVisibility(t.key, true)}
-                    >
-                      Visible
-                    </button>
-                    <button
-                      type="button"
-                      className={`tracker-vis-btn${!visible ? ' tracker-vis-btn--active' : ''}`}
-                      onClick={() => onSetTrackerVisibility(t.key, false)}
-                    >
-                      Hidden
-                    </button>
+          <>
+            <div className="tracker-visibility-list">
+              {TRACKERS.map(t => {
+                const visible = isTrackerVisible(t.key)
+                return (
+                  <div key={t.key} className="tracker-visibility-row">
+                    <span className="tracker-visibility-label">{t.icon} {t.label}</span>
+                    <div className="tracker-vis-toggle">
+                      <button
+                        type="button"
+                        className={`tracker-vis-btn${visible ? ' tracker-vis-btn--active' : ''}`}
+                        onClick={() => onSetTrackerVisibility(t.key, true)}
+                      >
+                        Visible
+                      </button>
+                      <button
+                        type="button"
+                        className={`tracker-vis-btn${!visible ? ' tracker-vis-btn--active' : ''}`}
+                        onClick={() => onSetTrackerVisibility(t.key, false)}
+                      >
+                        Hidden
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+            <div className="field-hint">
+              Visible — friends can open that tracker on your shared profile. Hidden — it's left out entirely, as if it didn't exist.
+            </div>
+          </>
         )}
       </div>
 

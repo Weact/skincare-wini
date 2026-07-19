@@ -2935,8 +2935,10 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 /* Select toggle + sort chips share one row — Select stays on par with the
-   sort controls instead of floating alone at the top of the page */
-.wk-toolbar-row {
+   sort controls instead of floating alone at the top of the page. Shared
+   by the Workout journal's list-level sort and the Poop tracker's per-day
+   sort. */
+.list-toolbar-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2945,8 +2947,9 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   margin-bottom: 14px;
 }
 
-.wk-toolbar-row .selection-bar,
-.wk-toolbar-row .wk-sort-row {
+.list-toolbar-row .selection-bar,
+.list-toolbar-row .wk-sort-row,
+.list-toolbar-row .cal-sort-row {
   margin-bottom: 0;
 }
 
