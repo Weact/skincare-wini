@@ -975,6 +975,9 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 /* ── Friends panel — slides into the tracker area rather than opening as
    a modal, so it reads as a change of view, not an interruption ── */
 .friends-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   animation: friends-panel-slide-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 

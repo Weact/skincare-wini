@@ -198,7 +198,8 @@ export default function App() {
 
   function switchMode(next) {
     setMode(next)
-    setViewingProfileCode(null)
+    setViewingFriend(null)
+    setShowFriends(false)
     if (next) localStorage.setItem('trackerMode', next)
     else localStorage.removeItem('trackerMode')
   }
@@ -666,7 +667,7 @@ export default function App() {
       <header className="app-header">
         <div className="app-header-top">
           <div className="app-header-left">
-            {mode && !viewingFriend && !showFriends && (
+            {mode && !viewingFriend && (
               <div className="mode-switch" role="tablist" aria-label="Tracker">
                 {TRACKERS.filter(t => settings.enabledTrackers.includes(t.key)).map(t => (
                   <button
