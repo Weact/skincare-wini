@@ -59,6 +59,9 @@ export const CHANGELOG = [
       'Fixed scratching a Positions card trapping the whole touch gesture on mobile, blocking you from scrolling past the grid',
       'Moved "Who can add you" and "Tracker visibility" out of the Friends menu into a new Privacy section in Settings',
       'Redesigned the friends list — each friend now gets a card with an avatar initial, replacing the plain list row',
+      '"Add a friend" is now a button that opens a popup for the code, instead of an always-visible input field',
+      'Fixed Positions cards scratching while scrolling on mobile — a swipe now commits to either scrolling or scratching, never both, and scratching itself reveals faster',
+      'Fixed holding down on a Positions card triggering the phone\'s native text-selection/callout menu',
     ],
   },
   {

@@ -11,12 +11,25 @@ import DeleteConfirmModal from './DeleteConfirmModal'
 // Once enough of the cover is cleared it calls onRevealed and unmounts (the
 // parent switches to the plain revealed card), so there's never more than a
 // handful of these canvases alive at once.
+// Below this many pixels of movement, a touch gesture's direction is still
+// ambiguous — wait for more before committing it to either scroll or scratch.
+const TOUCH_LOCK_THRESHOLD = 6
+
 function ScratchCover({ onRevealed }) {
   const canvasRef = useRef(null)
   const scratchingRef = useRef(false)
   const revealedRef = useRef(false)
   const checkScheduledRef = useRef(false)
   const scratchCountRef = useRef(0)
+  // Per-touch-gesture direction lock: 'pending' (undecided) → 'scroll' (a
+  // vertical swipe — hands off to the browser, never scratches) or 'scratch'
+  // (mostly horizontal/diagonal — scratches for the rest of this gesture).
+  // Without this, touch-action: pan-y still delivers pointermove events to
+  // the canvas *while* the browser is also scrolling the page, so a plain
+  // upward swipe to scroll was also drawing a scratch mark. Mouse/pen never
+  // need this — there's no competing scroll gesture to disambiguate from.
+  const touchGestureRef = useRef('pending')
+  const touchStartRef = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -51,19 +64,19 @@ function ScratchCover({ onRevealed }) {
     const ctx = canvas.getContext('2d')
     ctx.globalCompositeOperation = 'destination-out'
     ctx.beginPath()
-    ctx.arc(clientX - rect.left, clientY - rect.top, rect.width * 0.11, 0, Math.PI * 2)
+    ctx.arc(clientX - rect.left, clientY - rect.top, rect.width * 0.16, 0, Math.PI * 2)
     ctx.fill()
     scratchCountRef.current++
   }
 
-  // Reveals once EITHER condition is met: 45% of the cover cleared (the
-  // "actually scratched most of it off" case), or 250 dabs landed regardless
-  // of how much area they cleared (the smaller brush radius means someone
-  // scratching the same tiny corner over and over could otherwise never
-  // cross 45% — this guarantees the card gives up eventually either way).
+  // Reveals once EITHER condition is met: 35% of the cover cleared (the
+  // "actually scratched most of it off" case), or 130 dabs landed regardless
+  // of how much area they cleared (someone scratching the same tiny corner
+  // over and over could otherwise never cross 35% — this guarantees the
+  // card gives up eventually either way).
   function checkRevealed() {
     if (revealedRef.current) return
-    if (scratchCountRef.current >= 250) {
+    if (scratchCountRef.current >= 130) {
       revealedRef.current = true
       onRevealed()
       return
@@ -81,36 +94,84 @@ function ScratchCover({ onRevealed }) {
       total++
       if (data[i] === 0) cleared++
     }
-    if (total > 0 && cleared / total > 0.45) {
+    if (total > 0 && cleared / total > 0.35) {
       revealedRef.current = true
       onRevealed()
     }
   }
 
+  // checkRevealed reads the canvas back with getImageData, which is too
+  // costly to run on every single pointermove — rAF-throttling it still
+  // reveals mid-drag (at most one frame after crossing the threshold)
+  // instead of making the user lift their finger/mouse first.
+  function scheduleCheck() {
+    if (checkScheduledRef.current) return
+    checkScheduledRef.current = true
+    requestAnimationFrame(() => {
+      checkScheduledRef.current = false
+      checkRevealed()
+    })
+  }
+
   function handlePointerDown(e) {
+    if (e.pointerType === 'touch') {
+      // Direction still unknown — don't scratch or capture yet, wait for
+      // handlePointerMove to see which way this gesture actually goes.
+      touchGestureRef.current = 'pending'
+      touchStartRef.current = { x: e.clientX, y: e.clientY }
+      return
+    }
     e.currentTarget.setPointerCapture?.(e.pointerId)
     scratchingRef.current = true
     scratchAt(e.clientX, e.clientY)
     checkRevealed()
   }
-  // checkRevealed reads the canvas back with getImageData, which is too
-  // costly to run on every single pointermove — rAF-throttling it still
-  // reveals mid-drag (at most one frame after crossing the threshold)
-  // instead of making the user lift their finger/mouse first.
+
   function handlePointerMove(e) {
+    if (e.pointerType === 'touch') {
+      if (touchGestureRef.current === 'scroll') return
+      const dx = e.clientX - touchStartRef.current.x
+      const dy = e.clientY - touchStartRef.current.y
+      if (touchGestureRef.current === 'pending') {
+        if (Math.abs(dx) < TOUCH_LOCK_THRESHOLD && Math.abs(dy) < TOUCH_LOCK_THRESHOLD) return
+        if (Math.abs(dy) > Math.abs(dx)) {
+          // Predominantly vertical — this is a scroll, hand it entirely
+          // back to the browser and never touch the canvas again this
+          // gesture (touch-action: pan-y lets the scroll proceed natively).
+          touchGestureRef.current = 'scroll'
+          return
+        }
+        touchGestureRef.current = 'scratch'
+        e.currentTarget.setPointerCapture?.(e.pointerId)
+        scratchingRef.current = true
+      }
+      scratchAt(e.clientX, e.clientY)
+      scheduleCheck()
+      return
+    }
     if (!scratchingRef.current) return
     scratchAt(e.clientX, e.clientY)
-    if (!checkScheduledRef.current) {
-      checkScheduledRef.current = true
-      requestAnimationFrame(() => {
-        checkScheduledRef.current = false
-        checkRevealed()
-      })
-    }
+    scheduleCheck()
   }
-  function handlePointerUp() {
+
+  function handlePointerUp(e) {
+    if (e.pointerType === 'touch' && touchGestureRef.current === 'pending') {
+      // Lifted before the direction ever resolved — a plain tap, which
+      // counts as one dab rather than being silently dropped.
+      scratchAt(e.clientX, e.clientY)
+      checkRevealed()
+      return
+    }
     if (scratchingRef.current) checkRevealed()
     scratchingRef.current = false
+    touchGestureRef.current = 'pending'
+  }
+
+  function handlePointerCancel() {
+    // The browser took the gesture over natively (e.g. committed it to
+    // scrolling) — just reset, no scratch credit for an interrupted touch.
+    scratchingRef.current = false
+    touchGestureRef.current = 'pending'
   }
 
   return (
@@ -121,6 +182,7 @@ function ScratchCover({ onRevealed }) {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
     />
   )
 }

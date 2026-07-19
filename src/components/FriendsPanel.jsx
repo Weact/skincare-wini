@@ -15,6 +15,7 @@ const SEND_ERRORS = {
 // you, tracker visibility) live in Settings → Privacy instead — this panel
 // is purely about the friend list/requests now.
 export default function FriendsPanel({ onClose, profile, friends, incoming, outgoing, onSendRequest, onAcceptRequest, onDeclineRequest, onCancelRequest, onRemoveFriend, onSetAlias, onViewFriend }) {
+  const [showAddFriend, setShowAddFriend] = useState(false)
   const [codeInput, setCodeInput] = useState('')
   const [sendError, setSendError] = useState('')
   const [sending, setSending] = useState(false)
@@ -27,6 +28,12 @@ export default function FriendsPanel({ onClose, profile, friends, incoming, outg
     setTimeout(() => setCopied(false), 2000)
   }
 
+  function openAddFriend() {
+    setCodeInput('')
+    setSendError('')
+    setShowAddFriend(true)
+  }
+
   async function handleSend() {
     const code = codeInput.trim()
     if (!code) return
@@ -35,6 +42,7 @@ export default function FriendsPanel({ onClose, profile, friends, incoming, outg
     try {
       await onSendRequest(code)
       setCodeInput('')
+      setShowAddFriend(false)
     } catch (err) {
       setSendError(SEND_ERRORS[err.message] || 'Something went wrong')
     } finally {
@@ -68,29 +76,12 @@ export default function FriendsPanel({ onClose, profile, friends, incoming, outg
         <div className="field-hint">Share this so someone can add you as a friend.</div>
       </div>
 
-      <div className="settings-section">
-        <div className="settings-section-title">Add a friend</div>
-        <div className="profile-view-row">
-          <input
-            type="text"
-            className="field-input"
-            value={codeInput}
-            onChange={e => { setCodeInput(e.target.value.toUpperCase()); setSendError('') }}
-            onKeyDown={e => { if (e.key === 'Enter') handleSend() }}
-            placeholder="Enter their friend code"
-            maxLength={7}
-          />
-          <button
-            type="button"
-            className="wk-auto-btn"
-            onClick={handleSend}
-            disabled={!codeInput.trim() || sending}
-          >
-            Send
-          </button>
-        </div>
-        {sendError && <div className="field-hint field-hint--error">{sendError}</div>}
-      </div>
+      <button type="button" className="new-cat-btn" onClick={openAddFriend}>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+        Add a friend
+      </button>
 
       {incoming.length > 0 && (
         <div className="settings-section">
@@ -166,6 +157,50 @@ export default function FriendsPanel({ onClose, profile, friends, incoming, outg
           </ul>
         )}
       </div>
+
+      {showAddFriend && (
+        <div className="modal-backdrop" onClick={() => setShowAddFriend(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">Add a friend</span>
+              <button className="modal-close" onClick={() => setShowAddFriend(false)} aria-label="Close">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="field">
+                <label className="field-label">Their friend code</label>
+                <input
+                  type="text"
+                  className="field-input"
+                  value={codeInput}
+                  onChange={e => { setCodeInput(e.target.value.toUpperCase()); setSendError('') }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSend() }}
+                  placeholder="Enter their friend code"
+                  maxLength={7}
+                  autoFocus
+                />
+                {sendError && <div className="field-hint field-hint--error">{sendError}</div>}
+              </div>
+              <div className="delete-confirm-actions">
+                <button type="button" className="cat-cancel-btn cat-cancel-btn--text" onClick={() => setShowAddFriend(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="cat-save-btn"
+                  onClick={handleSend}
+                  disabled={!codeInput.trim() || sending}
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

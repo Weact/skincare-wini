@@ -3540,6 +3540,12 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   border-radius: var(--radius-sm);
   overflow: hidden;
   box-shadow: var(--shadow-card);
+  /* A long-press while scratching would otherwise trigger the native
+     text-selection/callout menu (magnifier, "Copy", "Look Up"…) on mobile —
+     none of that applies to a canvas, so it just looks like a glitch. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .position-card--highlighted {
