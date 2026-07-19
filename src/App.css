@@ -869,14 +869,14 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 .selection-toggle-btn {
-  font-size: 13px;
+  font-size: 14px;
   font-family: inherit;
   font-weight: 600;
   color: var(--text-muted);
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: 20px;
-  padding: 7px 16px;
+  padding: 8px 18px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
   -webkit-tap-highlight-color: transparent;
@@ -889,14 +889,14 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 .selection-delete-btn {
-  font-size: 13px;
+  font-size: 14px;
   font-family: inherit;
   font-weight: 600;
   color: #fff;
   background: var(--red);
   border: none;
   border-radius: 20px;
-  padding: 7px 16px;
+  padding: 8px 18px;
   cursor: pointer;
   transition: opacity 0.12s;
   -webkit-tap-highlight-color: transparent;
@@ -1080,6 +1080,10 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   flex-direction: column;
   gap: 6px;
   z-index: 5;
+  /* Own compositor layer so mobile Safari/Chrome fully tears it down on
+     unmount instead of occasionally leaving a stale ghost of its children's
+     box-shadow painted behind after closing */
+  transform: translateZ(0);
 }
 
 .fab-menu-item {
@@ -1098,6 +1102,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
   transform-origin: top center;
   animation: fab-menu-grow 0.16s ease both;
+  will-change: transform, opacity;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -2873,6 +2878,22 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   min-width: 90px;
   min-height: 38px;
   padding: 7px 11px;
+}
+
+/* Select toggle + sort chips share one row — Select stays on par with the
+   sort controls instead of floating alone at the top of the page */
+.wk-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.wk-toolbar-row .selection-bar,
+.wk-toolbar-row .wk-sort-row {
+  margin-bottom: 0;
 }
 
 /* Journal sort chips — reuses the calendar's sort styling, but wraps since

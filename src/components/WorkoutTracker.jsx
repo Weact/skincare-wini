@@ -261,15 +261,6 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
 
   return (
     <>
-      {!readOnly && (
-        <SelectionBar
-          selectMode={selectMode}
-          count={selectedIds.size}
-          onToggle={toggleSelectMode}
-          onDeleteClick={() => setShowDeleteConfirm(true)}
-        />
-      )}
-
       {(week.count > 0 || month.count > 0 || week.steps > 0 || month.steps > 0) && (
         <div className="wk-summary-row">
           <div className="wk-summary-tile">
@@ -322,35 +313,47 @@ export default function WorkoutTracker({ workouts, steps = [], logSteps, addWork
         </button>
       ))}
 
-      {workouts.length > 1 && (
-        <div className="cal-sort-row wk-sort-row">
-          <span className="cal-sort-label">Sort</span>
-          {SORT_OPTIONS.map(opt => {
-            const active = sortBy === opt.key
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                className={`cal-sort-btn${active ? ' cal-sort-btn--active' : ''}`}
-                onClick={() => handleSortClick(opt.key)}
-              >
-                {opt.label}
-                {active && (
-                  <span className="cal-sort-arrow">
-                    {sortDir === 'asc' ? '↑' : '↓'} {opt.dirLabels[sortDir]}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-          {(sortBy !== 'date' || sortDir !== 'desc') && (
-            <button
-              type="button"
-              className="cal-sort-btn cal-sort-reset"
-              onClick={() => { setSortBy('date'); setSortDir('desc') }}
-            >
-              ✕ Reset
-            </button>
+      {(!readOnly || workouts.length > 1) && (
+        <div className="wk-toolbar-row">
+          {!readOnly && (
+            <SelectionBar
+              selectMode={selectMode}
+              count={selectedIds.size}
+              onToggle={toggleSelectMode}
+              onDeleteClick={() => setShowDeleteConfirm(true)}
+            />
+          )}
+          {workouts.length > 1 && (
+            <div className="cal-sort-row wk-sort-row">
+              <span className="cal-sort-label">Sort</span>
+              {SORT_OPTIONS.map(opt => {
+                const active = sortBy === opt.key
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    className={`cal-sort-btn${active ? ' cal-sort-btn--active' : ''}`}
+                    onClick={() => handleSortClick(opt.key)}
+                  >
+                    {opt.label}
+                    {active && (
+                      <span className="cal-sort-arrow">
+                        {sortDir === 'asc' ? '↑' : '↓'} {opt.dirLabels[sortDir]}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+              {(sortBy !== 'date' || sortDir !== 'desc') && (
+                <button
+                  type="button"
+                  className="cal-sort-btn cal-sort-reset"
+                  onClick={() => { setSortBy('date'); setSortDir('desc') }}
+                >
+                  ✕ Reset
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
