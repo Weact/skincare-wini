@@ -36,9 +36,9 @@ export default function StepsGraphModal({ period, periodStart, today, stepsByDat
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+      <div className="modal-sheet modal-sheet--steps-graph" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <span className="modal-title">👟 {period === 'month' ? "This month's" : "This week's"} steps</span>
+          <span className="modal-title steps-graph-title">👟 {period === 'month' ? "This month's" : "This week's"} steps</span>
           <button className="modal-close" onClick={onClose} aria-label="Close">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -80,7 +80,7 @@ export default function StepsGraphModal({ period, periodStart, today, stepsByDat
                   </div>
                   <span className="steps-graph-day">
                     {dense
-                      ? (isToday || (i % 5 === 0) ? monthDayLabel(d) : '')
+                      ? (isToday || (i % 5 === 0) ? monthDayLabel(d) : ' ')
                       : weekdayLabel(d)}
                   </span>
                 </button>

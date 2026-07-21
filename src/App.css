@@ -2999,28 +2999,42 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 /* ── Steps graph modal ── */
+.modal-sheet--steps-graph {
+  max-width: 720px;
+}
+
+@media (min-width: 640px) {
+  .modal-sheet--steps-graph {
+    max-height: 78dvh;
+  }
+}
+
+.steps-graph-title {
+  font-size: 19px;
+}
+
 .steps-graph-avg {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
 }
 
 .steps-graph-avg-value {
-  font-size: 26px;
+  font-size: 34px;
   font-weight: 700;
   color: var(--primary);
 }
 
 .steps-graph-avg-label {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--text-muted);
 }
 
 .steps-graph-detail {
-  min-height: 18px;
-  font-size: 13px;
+  min-height: 22px;
+  font-size: 15px;
   color: var(--text);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .steps-graph-detail-hint {
@@ -3031,8 +3045,9 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 .steps-graph-bars {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  height: 160px;
+  gap: 10px;
+  height: 260px;
+  margin-top: 12px;
 }
 
 .steps-graph-bars--dense {
@@ -3040,7 +3055,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 .steps-graph-bars--dense .steps-graph-day {
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .steps-graph-bars--dense .steps-graph-bar {
@@ -3055,7 +3070,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   flex-direction: column;
   align-items: center;
   height: 100%;
-  gap: 4px;
+  gap: 10px;
   border: none;
   background: none;
   padding: 0;
@@ -3074,7 +3089,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 .steps-graph-value {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
   white-space: nowrap;
@@ -3086,6 +3101,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  border-bottom: 1.5px solid var(--border);
 }
 
 .steps-graph-bar {
@@ -3101,7 +3117,9 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 .steps-graph-day {
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 16px;
+  height: 16px;
   color: var(--text-muted);
 }
 
