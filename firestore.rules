@@ -46,6 +46,10 @@ service cloud.firestore {
       allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'poop');
     }
 
+    match /users/{userId}/steps/{stepId} {
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'workout');
+    }
+
     match /users/{userId}/categories/{categoryId} {
       allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'skincare');
     }

@@ -4,6 +4,7 @@ import { db } from '../firebase'
 import { TRACKERS } from '../constants'
 import { useWorkouts } from '../hooks/useWorkouts'
 import { usePoops } from '../hooks/usePoops'
+import { useSteps } from '../hooks/useSteps'
 import WorkoutTracker from './WorkoutTracker'
 import PoopTracker from './PoopTracker'
 import SharedSkincareView from './SharedSkincareView'
@@ -20,6 +21,7 @@ export default function SharedProfileView({ uid, label, onExit }) {
   const [ownerProfile, setOwnerProfile] = useState(null)
   const { workouts } = useWorkouts(uid)
   const { poops } = usePoops(uid)
+  const { steps } = useSteps(uid)
 
   useEffect(() => {
     if (!uid) return
@@ -73,7 +75,7 @@ export default function SharedProfileView({ uid, label, onExit }) {
           ) : activeMode === 'workout' ? (
             <WorkoutTracker
               workouts={workouts}
-              steps={[]}
+              steps={steps}
               logSteps={() => {}}
               addWorkout={() => {}}
               updateWorkout={() => {}}
