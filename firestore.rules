@@ -50,6 +50,21 @@ service cloud.firestore {
       allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'workout');
     }
 
+    // Tasks and their two metadata collections travel together — a shared
+    // task list is unreadable without the category/label docs its rows
+    // point at, so all three hang off the same 'tasks' visibility flag.
+    match /users/{userId}/tasks/{taskId} {
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'tasks');
+    }
+
+    match /users/{userId}/taskCategories/{categoryId} {
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'tasks');
+    }
+
+    match /users/{userId}/taskLabels/{labelId} {
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'tasks');
+    }
+
     match /users/{userId}/categories/{categoryId} {
       allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'skincare');
     }

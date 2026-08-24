@@ -26,6 +26,7 @@ export default function ChangelogModal({ onClose }) {
             <div key={release.version} className="cl-release">
               <div className="cl-release-header">
                 <span className="cl-version">v{release.version}</span>
+                {release.title && <span className="cl-title">{release.title}</span>}
                 {i === 0 && <span className="cl-new-badge">New</span>}
                 <span className="cl-date">{release.date}</span>
               </div>

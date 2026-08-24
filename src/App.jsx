@@ -28,6 +28,7 @@ import WorkoutCalendarModal from './components/WorkoutCalendarModal'
 import WorkoutTracker from './components/WorkoutTracker'
 import PoopTracker from './components/PoopTracker'
 import PositionsTracker from './components/PositionsTracker'
+import TasksTracker from './components/TasksTracker'
 import Toast from './components/Toast'
 import EmojiPicker from './components/EmojiPicker'
 import SelectionBar from './components/SelectionBar'
@@ -41,6 +42,9 @@ import { useWorkouts } from './hooks/useWorkouts'
 import { useSteps } from './hooks/useSteps'
 import { usePoops } from './hooks/usePoops'
 import { usePositions } from './hooks/usePositions'
+import { useTasks } from './hooks/useTasks'
+import { useTaskCategories } from './hooks/useTaskCategories'
+import { useTaskLabels } from './hooks/useTaskLabels'
 import { useProfile } from './hooks/useProfile'
 import { useFriends } from './hooks/useFriends'
 import WelcomeScreen from './components/WelcomeScreen'
@@ -170,6 +174,9 @@ export default function App() {
   const { steps, logSteps } = useSteps(user?.uid)
   const { poops, addPoop, deletePoop, reorderPoops } = usePoops(user?.uid)
   const { positionStates, revealPosition, togglePositionDone, hidePositions } = usePositions(user?.uid)
+  const { tasks, addTask, updateTask, toggleTaskDone, deleteTask, deleteTasks, reorderTasks } = useTasks(user?.uid)
+  const { taskCategories, addTaskCategory } = useTaskCategories(user?.uid)
+  const { taskLabels, addTaskLabel, updateTaskLabel, deleteTaskLabel } = useTaskLabels(user?.uid)
   const { profile, setVisibility, setTrackerVisibilityMode, setTrackerVisibility, setAllTrackerVisibility } = useProfile(user?.uid, user?.isAnonymous)
   const { friends, incoming, outgoing, sendRequest, acceptRequest, declineRequest, cancelRequest, removeFriend, setFriendAlias } = useFriends(user?.uid, profile?.profileCode)
   const [showFriends, setShowFriends] = useState(false)
@@ -731,7 +738,7 @@ export default function App() {
                 </svg>
                 {changelogIsNew && <span className="changelog-dot" />}
               </button>
-              {mode && mode !== 'poop' && mode !== 'positions' && !viewingFriend && !showFriends && (
+              {mode && mode !== 'poop' && mode !== 'positions' && mode !== 'tasks' && !viewingFriend && !showFriends && (
                 <button
                   className="calendar-btn"
                   onClick={() => setShowCalendar(true)}
@@ -768,6 +775,8 @@ export default function App() {
           <span className="app-count">
             {mode === 'workout'
               ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`
+              : mode === 'tasks'
+              ? `${tasks.filter(t => !t.done).length} open`
               : mode === 'poop'
               ? `${poops.length} logged`
               : mode === 'positions'
@@ -801,6 +810,23 @@ export default function App() {
           <SharedProfileView uid={viewingFriend.uid} label={viewingFriend.label} onExit={() => setViewingFriend(null)} />
         ) : !mode ? (
           <WelcomeScreen onOpenSettings={() => setShowSettings(true)} />
+        ) : mode === 'tasks' ? (
+          <TasksTracker
+            tasks={tasks}
+            taskCategories={taskCategories}
+            taskLabels={taskLabels}
+            addTask={addTask}
+            updateTask={updateTask}
+            toggleTaskDone={toggleTaskDone}
+            deleteTask={deleteTask}
+            deleteTasks={deleteTasks}
+            reorderTasks={reorderTasks}
+            addTaskCategory={addTaskCategory}
+            addTaskLabel={addTaskLabel}
+            updateTaskLabel={updateTaskLabel}
+            deleteTaskLabel={deleteTaskLabel}
+            onAdded={() => showToast('Task added ✅')}
+          />
         ) : mode === 'poop' ? (
           <PoopTracker poops={poops} addPoop={addPoop} deletePoop={deletePoop} reorderPoops={reorderPoops} />
         ) : mode === 'positions' ? (

@@ -80,3 +80,36 @@ export function getProductStatus(product) {
   }
   return { type: 'open', label: `${days}d left` }
 }
+
+// Monday-first week containing `dateStr`, as inclusive ISO bounds. Matches
+// getMonthGrid's Monday-first convention so the Tasks tracker's "this week"
+// lines up with what the calendars already draw.
+export function getWeekRange(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00')
+  const offset = (d.getDay() + 6) % 7 // 0 = Monday
+  const start = new Date(d)
+  start.setDate(d.getDate() - offset)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  return { start: toISODate(start), end: toISODate(end) }
+}
+
+// 'YYYY-MM-DD' -> 'YYYY-MM', the grouping key for the Future section's
+// month buckets. String-sortable, so ascending month order is a plain sort.
+export function monthKeyOf(dateStr) {
+  return dateStr.slice(0, 7)
+}
+
+export function formatMonthKey(key) {
+  const [y, m] = key.split('-').map(Number)
+  return formatMonthYear(y, m - 1)
+}
+
+// Short relative wording for an overdue task — how late it already is
+export function formatOverdue(dateStr) {
+  const days = -getDaysUntil(dateStr)
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days}d late`
+  if (days < 30) return `${Math.floor(days / 7)}w late`
+  return `${Math.floor(days / 30)}mo late`
+}

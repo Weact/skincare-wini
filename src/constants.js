@@ -35,6 +35,7 @@ export const WORKOUT_INTENSITIES = [
 export const TRACKERS = [
   { key: 'skincare', label: 'Skincare', icon: '🧴',  defaultEnabled: true },
   { key: 'workout',  label: 'Workouts', icon: '🏋️', defaultEnabled: true },
+  { key: 'tasks',    label: 'Tasks',    icon: '✅',  defaultEnabled: true },
   { key: 'poop',     label: 'Poop',     icon: '💩',  defaultEnabled: false },
 ]
 
@@ -188,3 +189,20 @@ export const TIME_OF_DAY = [
   { key: 'evening',   label: 'Evening',   icon: '🌆' },
   { key: 'night',     label: 'Night',     icon: '🌙' },
 ]
+
+// Label colours for the Tasks tracker. Only the key is stored on the label
+// doc — the actual light/dark values live in App.css as
+// .task-label-chip--{key} / .task-swatch--{key}, so both themes stay in one
+// place and existing labels re-theme for free.
+export const TASK_LABEL_COLORS = [
+  { key: 'gray',   label: 'Gray' },
+  { key: 'rose',   label: 'Rose' },
+  { key: 'amber',  label: 'Amber' },
+  { key: 'sage',   label: 'Sage' },
+  { key: 'teal',   label: 'Teal' },
+  { key: 'sky',    label: 'Sky' },
+  { key: 'violet', label: 'Violet' },
+  { key: 'plum',   label: 'Plum' },
+]
+
+export const DEFAULT_LABEL_COLOR = 'gray'

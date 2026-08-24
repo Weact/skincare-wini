@@ -5,9 +5,15 @@ import { TRACKERS } from '../constants'
 import { useWorkouts } from '../hooks/useWorkouts'
 import { usePoops } from '../hooks/usePoops'
 import { useSteps } from '../hooks/useSteps'
+import { useTasks } from '../hooks/useTasks'
+import { useTaskCategories } from '../hooks/useTaskCategories'
+import { useTaskLabels } from '../hooks/useTaskLabels'
 import WorkoutTracker from './WorkoutTracker'
 import PoopTracker from './PoopTracker'
+import TasksTracker from './TasksTracker'
 import SharedSkincareView from './SharedSkincareView'
+
+const noop = () => {}
 
 // Read-only view of a friend's shared trackers, reached by tapping View
 // next to them in the Friends panel. No code lookup here — by the time
@@ -22,6 +28,9 @@ export default function SharedProfileView({ uid, label, onExit }) {
   const { workouts } = useWorkouts(uid)
   const { poops } = usePoops(uid)
   const { steps } = useSteps(uid)
+  const { tasks } = useTasks(uid)
+  const { taskCategories } = useTaskCategories(uid)
+  const { taskLabels } = useTaskLabels(uid)
 
   useEffect(() => {
     if (!uid) return
@@ -37,6 +46,59 @@ export default function SharedProfileView({ uid, label, onExit }) {
   const trackerVisibility = ownerProfile?.trackerVisibility || {}
   const visibleTrackers = TRACKERS.filter(t => trackerVisibility[t.key] !== false)
   const activeMode = visibleTrackers.some(t => t.key === viewMode) ? viewMode : visibleTrackers[0]?.key
+
+  // Every tracker in TRACKERS gets an explicit branch here — a fallthrough
+  // `else` would silently render the wrong tracker's data the next time one
+  // is added to that list.
+  function renderTracker() {
+    switch (activeMode) {
+      case 'skincare':
+        return <SharedSkincareView uid={uid} />
+      case 'workout':
+        return (
+          <WorkoutTracker
+            workouts={workouts}
+            steps={steps}
+            logSteps={noop}
+            addWorkout={noop}
+            updateWorkout={noop}
+            deleteWorkout={noop}
+            readOnly
+          />
+        )
+      case 'tasks':
+        return (
+          <TasksTracker
+            tasks={tasks}
+            taskCategories={taskCategories}
+            taskLabels={taskLabels}
+            addTask={noop}
+            updateTask={noop}
+            toggleTaskDone={noop}
+            deleteTask={noop}
+            deleteTasks={noop}
+            reorderTasks={noop}
+            addTaskCategory={noop}
+            addTaskLabel={noop}
+            updateTaskLabel={noop}
+            deleteTaskLabel={noop}
+            readOnly
+          />
+        )
+      case 'poop':
+        return (
+          <PoopTracker
+            poops={poops}
+            addPoop={noop}
+            deletePoop={noop}
+            reorderPoops={noop}
+            readOnly
+          />
+        )
+      default:
+        return null
+    }
+  }
 
   return (
     <div className="shared-profile">
@@ -70,27 +132,7 @@ export default function SharedProfileView({ uid, label, onExit }) {
             ))}
           </div>
 
-          {activeMode === 'skincare' ? (
-            <SharedSkincareView uid={uid} />
-          ) : activeMode === 'workout' ? (
-            <WorkoutTracker
-              workouts={workouts}
-              steps={steps}
-              logSteps={() => {}}
-              addWorkout={() => {}}
-              updateWorkout={() => {}}
-              deleteWorkout={() => {}}
-              readOnly
-            />
-          ) : (
-            <PoopTracker
-              poops={poops}
-              addPoop={() => {}}
-              deletePoop={() => {}}
-              reorderPoops={() => {}}
-              readOnly
-            />
-          )}
+          {renderTracker()}
         </>
       )}
     </div>
