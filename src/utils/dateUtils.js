@@ -113,3 +113,25 @@ export function formatOverdue(dateStr) {
   if (days < 30) return `${Math.floor(days / 7)}w late`
   return `${Math.floor(days / 30)}mo late`
 }
+
+// The date as it reads on a task row. Dates in the current year keep the
+// weekday and drop the year — the row is narrow and the year is noise for
+// anything you're actually planning; other years fall back to the
+// unambiguous numeric form so a 2025 task can't be mistaken for a 2026 one.
+export function formatTaskDate(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.getFullYear() === new Date().getFullYear()
+    ? formatDayHeading(dateStr)
+    : formatDisplayDate(dateStr)
+}
+
+// 'past' | 'today' | 'future' — the only thing that colours a task's date.
+// Plain string compare: both sides are ISO days, so no Date objects and no
+// timezone to get wrong.
+export function dateTone(dateStr, today) {
+  if (!dateStr) return null
+  if (dateStr < today) return 'past'
+  if (dateStr > today) return 'future'
+  return 'today'
+}

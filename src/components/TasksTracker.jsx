@@ -17,6 +17,8 @@ import {
   formatMonthKey,
   formatDayHeading,
   formatOverdue,
+  formatTaskDate,
+  dateTone,
 } from '../utils/dateUtils'
 import TaskRow from './TaskRow'
 import TaskForm from './TaskForm'
@@ -49,14 +51,68 @@ function SortableTaskRow(props) {
   )
 }
 
-function readStoredSplit() {
-  const raw = parseFloat(localStorage.getItem('tasksSplit'))
-  return Number.isFinite(raw) && raw >= 20 && raw <= 80 ? raw : 50
-}
+// One resizable pane pair. Two are on screen at once (Today|This week and
+// Expired|Future) and they resize independently, so the geometry — and the
+// keys it persists to — is per-pair rather than per-tracker; one shared key
+// would make either divider drag both rows.
+function useSplitPane({ splitKey, collapseKey, leftKey, rightKey, defaultSplit }) {
+  const [split, setSplit] = useState(() => {
+    const raw = parseFloat(localStorage.getItem(splitKey))
+    return Number.isFinite(raw) && raw >= 20 && raw <= 80 ? raw : defaultSplit
+  })
+  const [collapsed, setCollapsed] = useState(() => {
+    const raw = localStorage.getItem(collapseKey)
+    return raw === leftKey || raw === rightKey ? raw : null
+  })
+  const [dragging, setDragging] = useState(false)
+  const ref = useRef(null)
 
-function readStoredCollapsed() {
-  const raw = localStorage.getItem('tasksCollapsed')
-  return raw === 'today' || raw === 'week' ? raw : null
+  useEffect(() => { localStorage.setItem(splitKey, String(split)) }, [split])
+
+  useEffect(() => {
+    if (collapsed) localStorage.setItem(collapseKey, collapsed)
+    else localStorage.removeItem(collapseKey)
+  }, [collapsed])
+
+  // Pointer events (not mouse+touch) so one code path drives finger and
+  // cursor alike, with touch-action:none on the handle so a drag on the
+  // divider never doubles as a page scroll.
+  function onPointerDown(e) {
+    if (collapsed) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setDragging(true)
+  }
+
+  function onPointerMove(e) {
+    if (!dragging || !ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    if (rect.width === 0) return
+    const pct = ((e.clientX - rect.left) / rect.width) * 100
+    setSplit(Math.min(80, Math.max(20, pct)))
+  }
+
+  function onPointerUp(e) {
+    if (!dragging) return
+    e.currentTarget.releasePointerCapture(e.pointerId)
+    setDragging(false)
+  }
+
+  function onKeyDown(e) {
+    if (collapsed) return
+    if (e.key === 'ArrowLeft') { e.preventDefault(); setSplit(s => Math.max(20, s - 5)) }
+    if (e.key === 'ArrowRight') { e.preventDefault(); setSplit(s => Math.min(80, s + 5)) }
+  }
+
+  return {
+    split,
+    collapsed,
+    setCollapsed,
+    dragging,
+    ref,
+    leftKey,
+    rightKey,
+    dividerProps: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp, onKeyDown },
+  }
 }
 
 export default function TasksTracker({
@@ -92,12 +148,24 @@ export default function TasksTracker({
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  // Split-pane geometry. Both persisted so the layout you set survives a
-  // reload — collapsing a side is just a pinned extreme of the same control.
-  const [split, setSplit] = useState(readStoredSplit)
-  const [collapsed, setCollapsed] = useState(readStoredCollapsed)
-  const [dragging, setDragging] = useState(false)
-  const splitRef = useRef(null)
+  // The upcoming pair keeps the original storage keys, so a layout set
+  // before Expired existed survives the upgrade. Expired starts narrower
+  // than Future: an empty Expired pane is the healthy case, and it
+  // shouldn't cost Future half the width just to say so.
+  const nowPane = useSplitPane({
+    splitKey: 'tasksSplit',
+    collapseKey: 'tasksCollapsed',
+    leftKey: 'today',
+    rightKey: 'week',
+    defaultSplit: 50,
+  })
+  const latePane = useSplitPane({
+    splitKey: 'tasksSplitLate',
+    collapseKey: 'tasksCollapsedLate',
+    leftKey: 'expired',
+    rightKey: 'future',
+    defaultSplit: 38,
+  })
 
   // Predicted drag order, set synchronously on drop and cleared once
   // Firestore confirms it — without this the dropped row snaps back to its
@@ -108,13 +176,6 @@ export default function TasksTracker({
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   )
-
-  useEffect(() => { localStorage.setItem('tasksSplit', String(split)) }, [split])
-
-  useEffect(() => {
-    if (collapsed) localStorage.setItem('tasksCollapsed', collapsed)
-    else localStorage.removeItem('tasksCollapsed')
-  }, [collapsed])
 
   useEffect(() => {
     if (!liveOrder) return
@@ -170,12 +231,16 @@ export default function TasksTracker({
       .map(key => ({ key, days: groupByDay(map.get(key)) }))
   }
 
+  // Four date buckets, mutually exclusive. Anything before today is its own
+  // pane now rather than riding along at the top of Today.
   const dated = tasks.filter(t => t.date)
-  const todayTasks = dated.filter(t => t.date <= today)          // includes overdue
+  const expiredTasks = dated.filter(t => t.date < today)
+  const todayTasks = dated.filter(t => t.date === today)
   const weekTasks = dated.filter(t => t.date > today && t.date <= weekEnd)
   const futureTasks = dated.filter(t => t.date > weekEnd)
   const undatedTasks = tasks.filter(t => !t.date)
 
+  const expiredGroups = groupByDay(expiredTasks)
   const todayGroups = groupByDay(todayTasks)
   const weekGroups = groupByDay(weekTasks)
   const monthGroups = groupByMonth(futureTasks)
@@ -277,7 +342,9 @@ export default function TasksTracker({
 
   const canDrag = !readOnly && !selectMode
 
-  function renderTask(task, overdue = false) {
+  function renderTask(task) {
+    const tone = dateTone(task.date, today)
+    const overdue = tone === 'past'
     const rowProps = {
       task,
       category: task.categoryId ? catById.get(task.categoryId) : null,
@@ -292,6 +359,12 @@ export default function TasksTracker({
       onToggleSelect: toggleSelected,
       readOnly,
       overdue,
+      // The row carries its own date now, so nothing above it has to. How
+      // late an overdue task already is rides along with it — that used to
+      // be the day heading's job.
+      dateLabel: task.date ? formatTaskDate(task.date) : null,
+      tone,
+      lateLabel: overdue ? formatOverdue(task.date) : null,
       // The form sits at the top of the tracker, so the row it belongs to
       // has to say so or you lose track of what you're editing
       editing: editingId === task.id,
@@ -302,20 +375,15 @@ export default function TasksTracker({
   }
 
   // One day's worth of rows, wrapped in its own SortableContext so ordering
-  // stays scoped to that day
-  function renderDay({ date, items }, { showHeading = true, headingLabel = null } = {}) {
-    const overdue = date < today
+  // stays scoped to that day. The day is no longer labelled: every row
+  // prints its own date, and a heading repeating it is exactly what stopped
+  // the list reading as one continuous run.
+  function renderDay({ date, items }) {
     return (
       <div key={date} className="task-day">
-        {showHeading && (
-          <div className={`task-day-heading${overdue ? ' task-day-heading--overdue' : ''}`}>
-            <span className="task-day-name">{headingLabel || formatDayHeading(date)}</span>
-            {overdue && <span className="task-day-late">{formatOverdue(date)}</span>}
-          </div>
-        )}
         <SortableContext items={items.map(t => t.id)} strategy={verticalListSortingStrategy}>
           <div className="task-day-list">
-            {items.map(t => renderTask(t, overdue))}
+            {items.map(t => renderTask(t))}
           </div>
         </SortableContext>
       </div>
@@ -363,7 +431,7 @@ export default function TasksTracker({
     )
   }
 
-  // `context` is the section's own name — there are four of these buttons on
+  // `context` is the section's own name — there are five of these buttons on
   // screen at once, so a bare "Add a task" would leave them indistinguishable
   function addButton(key, date, context) {
     if (readOnly || selectMode) return null
@@ -379,74 +447,75 @@ export default function TasksTracker({
     )
   }
 
-  // ── Split-pane divider ──────────────────────────────────────────────
-  // Pointer events (not mouse+touch) so one code path drives finger and
-  // cursor alike, with touch-action:none on the handle so a drag on the
-  // divider never doubles as a page scroll.
-  function onDividerDown(e) {
-    if (collapsed) return
-    e.currentTarget.setPointerCapture(e.pointerId)
-    setDragging(true)
+  // ── Pane pairs ──────────────────────────────────────────────────────
+  // A `spec` describes one side: { key, title, count, addDate, bodyClass,
+  // content }. `key` is both the collapse target and the add form's
+  // identity, so the two can never disagree about which pane you're on.
+  function renderRail(pane, spec) {
+    return (
+      <button
+        type="button"
+        className="task-rail"
+        onClick={() => pane.setCollapsed(null)}
+        aria-label={`Expand ${spec.title}`}
+      >
+        <span className="task-rail-text">{spec.title}</span>
+        {spec.count > 0 && <span className="task-rail-count">{spec.count}</span>}
+      </button>
+    )
   }
 
-  function onDividerMove(e) {
-    if (!dragging || !splitRef.current) return
-    const rect = splitRef.current.getBoundingClientRect()
-    if (rect.width === 0) return
-    const pct = ((e.clientX - rect.left) / rect.width) * 100
-    setSplit(Math.min(80, Math.max(20, pct)))
-  }
-
-  function onDividerUp(e) {
-    if (!dragging) return
-    e.currentTarget.releasePointerCapture(e.pointerId)
-    setDragging(false)
-  }
-
-  function onDividerKeyDown(e) {
-    if (collapsed) return
-    if (e.key === 'ArrowLeft') { e.preventDefault(); setSplit(s => Math.max(20, s - 5)) }
-    if (e.key === 'ArrowRight') { e.preventDefault(); setSplit(s => Math.min(80, s + 5)) }
+  function renderPane(pane, spec, caret) {
+    return (
+      <section className="task-pane">
+        <div className="task-pane-header">
+          <span className="task-pane-title">{spec.title}</span>
+          {spec.count > 0 && <span className="task-pane-count">{spec.count}</span>}
+          <span className="task-pane-spacer" />
+          {addButton(spec.key, spec.addDate, spec.title)}
+          <button
+            type="button"
+            className="task-collapse-btn"
+            onClick={() => pane.setCollapsed(spec.key)}
+            aria-label={`Collapse ${spec.title}`}
+          >
+            {caret}
+          </button>
+        </div>
+        <div className={`task-pane-body${spec.bodyClass ? ` ${spec.bodyClass}` : ''}`}>
+          {spec.content}
+        </div>
+      </section>
+    )
   }
 
   // Two columns when a side is collapsed, three when it isn't — the divider
   // is only rendered while both panes are open, so a fixed 3-column template
   // would drop the surviving pane into the wrong (zero-width) track.
-  const gridTemplate = collapsed === 'today'
-    ? '2.4rem 1fr'
-    : collapsed === 'week'
-    ? '1fr 2.4rem'
-    : `${split}% 0.55rem 1fr`
-
-  function rail(label, count) {
+  function renderSplit(pane, left, right) {
+    const gridTemplate = pane.collapsed === pane.leftKey
+      ? '2.4rem 1fr'
+      : pane.collapsed === pane.rightKey
+      ? '1fr 2.4rem'
+      : `${pane.split}% 0.55rem 1fr`
     return (
-      <button
-        type="button"
-        className="task-rail"
-        onClick={() => setCollapsed(null)}
-        aria-label={`Expand ${label}`}
-      >
-        <span className="task-rail-text">{label}</span>
-        {count > 0 && <span className="task-rail-count">{count}</span>}
-      </button>
-    )
-  }
+      <div className="tasks-split" ref={pane.ref} style={{ gridTemplateColumns: gridTemplate }}>
+        {pane.collapsed === pane.leftKey ? renderRail(pane, left) : renderPane(pane, left, '‹')}
 
-  function paneHeader(title, count, key, date, collapseKey) {
-    return (
-      <div className="task-pane-header">
-        <span className="task-pane-title">{title}</span>
-        {count > 0 && <span className="task-pane-count">{count}</span>}
-        <span className="task-pane-spacer" />
-        {addButton(key, date, title)}
-        <button
-          type="button"
-          className="task-collapse-btn"
-          onClick={() => setCollapsed(collapseKey)}
-          aria-label={`Collapse ${title}`}
-        >
-          {collapseKey === 'today' ? '‹' : '›'}
-        </button>
+        {!pane.collapsed && (
+          <div
+            className={`task-divider${pane.dragging ? ' task-divider--dragging' : ''}`}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={`Resize ${left.title} and ${right.title}`}
+            tabIndex={0}
+            {...pane.dividerProps}
+          >
+            <span className="task-divider-grip" />
+          </div>
+        )}
+
+        {pane.collapsed === pane.rightKey ? renderRail(pane, right) : renderPane(pane, right, '›')}
       </div>
     )
   }
@@ -454,16 +523,49 @@ export default function TasksTracker({
   const totalOpen = openCount(tasks)
   const isEmpty = tasks.length === 0
 
-  // Seed dates for each section's own "+": tomorrow for This week (today
-  // already has its own pane), and the first day past this week for Future.
+  // Seed dates for each pane's own "+": tomorrow for This week (today has
+  // its own pane), yesterday for Expired so the task lands in the pane you
+  // tapped instead of jumping straight out of it, and the first day past
+  // this week for Future.
   // toISODate, not toISOString — the latter shifts to UTC and lands on the
   // wrong day for any timezone east of it.
   const tomorrow = new Date(today + 'T00:00:00')
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowISO = toISODate(tomorrow)
+  const yesterday = new Date(today + 'T00:00:00')
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayISO = toISODate(yesterday)
   const afterWeek = new Date(weekEnd + 'T00:00:00')
   afterWeek.setDate(afterWeek.getDate() + 1)
   const afterWeekISO = toISODate(afterWeek)
+
+  const futureContent = monthGroups.length === 0 ? (
+    <p className="task-pane-empty">Nothing scheduled beyond this week.</p>
+  ) : (
+    monthGroups.map(({ key, days }) => {
+      const monthOpen = days.reduce((n, d) => n + openCount(d.items), 0)
+      const isCollapsed = collapsedMonths.has(key)
+      return (
+        <div key={key} className="task-month">
+          <button
+            type="button"
+            className="task-month-header"
+            onClick={() => toggleMonth(key)}
+            aria-expanded={!isCollapsed}
+          >
+            <span className={`task-month-caret${isCollapsed ? '' : ' task-month-caret--open'}`}>›</span>
+            <span className="task-month-name">{formatMonthKey(key)}</span>
+            {monthOpen > 0 && <span className="task-pane-count">{monthOpen}</span>}
+          </button>
+          {!isCollapsed && (
+            <div className="task-month-body">
+              {days.map(g => renderDay(g))}
+            </div>
+          )}
+        </div>
+      )
+    })
+  )
 
   return (
     <div className="tasks-tracker">
@@ -496,104 +598,57 @@ export default function TasksTracker({
           <p className="empty-text">
             {readOnly
               ? 'Nothing on the list.'
-              : 'Add your first task above — give it a date to slot it into Today, This week, or Future, or leave it undated.'}
+              : 'Add your first task above — give it a date to slot it into Today, This week or Future, or leave it undated.'}
           </p>
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           {/* ── Today | This week ── */}
-          <div className="tasks-split" ref={splitRef} style={{ gridTemplateColumns: gridTemplate }}>
-            {collapsed === 'today' ? (
-              rail('Today', openCount(todayTasks))
-            ) : (
-              <section className="task-pane">
-                {paneHeader('Today', openCount(todayTasks), 'today', today, 'today')}
-                <div className="task-pane-body">
-                  {todayGroups.length === 0 ? (
-                    <p className="task-pane-empty">Nothing due today.</p>
-                  ) : (
-                    // A heading per day only earns its space once overdue
-                    // tasks have pulled a second day into this pane
-                    todayGroups.map(g => renderDay(g, {
-                      showHeading: todayGroups.length > 1,
-                      headingLabel: g.date === today ? 'Today' : null,
-                    }))
-                  )}
-                </div>
-              </section>
-            )}
+          {renderSplit(
+            nowPane,
+            {
+              key: 'today',
+              title: 'Today',
+              count: openCount(todayTasks),
+              addDate: today,
+              content: todayGroups.length === 0
+                ? <p className="task-pane-empty">Nothing due today.</p>
+                : todayGroups.map(g => renderDay(g)),
+            },
+            {
+              key: 'week',
+              title: 'This week',
+              count: openCount(weekTasks),
+              addDate: tomorrowISO,
+              content: weekGroups.length === 0
+                ? <p className="task-pane-empty">Nothing left this week.</p>
+                : weekGroups.map(g => renderDay(g)),
+            },
+          )}
 
-            {!collapsed && (
-              <div
-                className={`task-divider${dragging ? ' task-divider--dragging' : ''}`}
-                role="separator"
-                aria-orientation="vertical"
-                aria-label="Resize Today and This week"
-                tabIndex={0}
-                onPointerDown={onDividerDown}
-                onPointerMove={onDividerMove}
-                onPointerUp={onDividerUp}
-                onPointerCancel={onDividerUp}
-                onKeyDown={onDividerKeyDown}
-              >
-                <span className="task-divider-grip" />
-              </div>
-            )}
-
-            {collapsed === 'week' ? (
-              rail('This week', openCount(weekTasks))
-            ) : (
-              <section className="task-pane">
-                {paneHeader('This week', openCount(weekTasks), 'week', tomorrowISO, 'week')}
-                <div className="task-pane-body">
-                  {weekGroups.length === 0 ? (
-                    <p className="task-pane-empty">Nothing left this week.</p>
-                  ) : (
-                    weekGroups.map(g => renderDay(g))
-                  )}
-                </div>
-              </section>
-            )}
-          </div>
-
-          {/* ── Future ── */}
-          <section className="task-section">
-            <div className="task-section-header">
-              <span className="task-section-title">Future</span>
-              {openCount(futureTasks) > 0 && (
-                <span className="task-pane-count">{openCount(futureTasks)}</span>
-              )}
-              <span className="task-pane-spacer" />
-              {addButton('future', afterWeekISO, 'Future')}
-            </div>
-            {monthGroups.length === 0 ? (
-              <p className="task-pane-empty">Nothing scheduled beyond this week.</p>
-            ) : (
-              monthGroups.map(({ key, days }) => {
-                const monthOpen = days.reduce((n, d) => n + openCount(d.items), 0)
-                const isCollapsed = collapsedMonths.has(key)
-                return (
-                  <div key={key} className="task-month">
-                    <button
-                      type="button"
-                      className="task-month-header"
-                      onClick={() => toggleMonth(key)}
-                      aria-expanded={!isCollapsed}
-                    >
-                      <span className={`task-month-caret${isCollapsed ? '' : ' task-month-caret--open'}`}>›</span>
-                      <span className="task-month-name">{formatMonthKey(key)}</span>
-                      {monthOpen > 0 && <span className="task-pane-count">{monthOpen}</span>}
-                    </button>
-                    {!isCollapsed && (
-                      <div className="task-month-body">
-                        {days.map(g => renderDay(g))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </section>
+          {/* ── Expired | Future ── */}
+          {renderSplit(
+            latePane,
+            {
+              key: 'expired',
+              title: 'Expired',
+              count: openCount(expiredTasks),
+              addDate: yesterdayISO,
+              content: expiredGroups.length === 0
+                ? <p className="task-pane-empty">Nothing overdue.</p>
+                : expiredGroups.map(g => renderDay(g)),
+            },
+            {
+              key: 'future',
+              title: 'Future',
+              count: openCount(futureTasks),
+              addDate: afterWeekISO,
+              // Months bring their own padding and full-bleed dividers, so
+              // the pane body must not add a gutter on top of them
+              bodyClass: 'task-pane-body--flush',
+              content: futureContent,
+            },
+          )}
 
           {/* ── Undated ── */}
           <section className="task-section">

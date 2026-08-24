@@ -18,12 +18,16 @@ export default function TaskRow({
   onToggleSelect,
   readOnly = false,
   overdue = false,
+  dateLabel = null,
+  tone = null,
+  lateLabel = null,
   editing = false,
   dragHandleProps = null,
 }) {
-  // The row never repeats its own date — every list it appears in already
-  // sits under a day heading (or is the Undated section), so a date chip
-  // here would just be noise in an already-narrow column.
+  // The date lives on the row rather than in a heading above it, so the
+  // rows run as one unbroken column. `tone` (past / today / future) is what
+  // says how urgent a task is — colour on a date reads on its own, where
+  // colour on a border has to be learned first.
   const hasMeta = !!category || labels.length > 0
 
   function handleRowClick() {
@@ -78,6 +82,12 @@ export default function TaskRow({
 
         <button type="button" className="task-row-body" onClick={handleRowClick}>
           <span className="task-title">{task.title}</span>
+          {dateLabel && (
+            <span className={`task-date task-date--${tone}`}>
+              {dateLabel}
+              {lateLabel && <span className="task-date-late"> · {lateLabel}</span>}
+            </span>
+          )}
           {hasMeta && (
             <span className="task-meta">
               {category && (

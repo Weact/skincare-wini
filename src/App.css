@@ -37,6 +37,9 @@
   --red-bg: #fce8e8;
   --red-text: #a03030;
 
+  --blue: #3f74c8;
+  --blue-text: #2b6297;
+
   --sealed: #7a8fa0;
   --sealed-bg: #edf1f5;
   --sealed-text: #5a6e80;
@@ -79,6 +82,9 @@
   --red: #e06868;
   --red-bg: #220808;
   --red-text: #e06868;
+
+  --blue: #8dc0ef;
+  --blue-text: #8dc0ef;
 
   --sealed: #7888a0;
   --sealed-bg: #141c2a;
@@ -3887,7 +3893,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   font-weight: 400;
 }
 
-/* ── Today | This week split ── */
+/* ── Pane pairs (Today | This week, Expired | Future) ── */
 .tasks-split {
   display: grid;
   align-items: stretch;
@@ -3945,7 +3951,13 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
+}
+
+/* Future's months bring their own padding and full-bleed separators */
+.task-pane-body--flush {
+  padding: 0;
+  gap: 0;
 }
 
 .task-pane-empty {
@@ -4142,45 +4154,13 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   padding: 0 8px 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-/* ── Day groups ── */
-.task-day {
-  display: flex;
-  flex-direction: column;
   gap: 4px;
 }
 
-.task-day-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 0 4px 2px;
-  font-size: var(--fz-xs);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--text-muted);
-}
-
-.task-day-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.task-day-heading--overdue { color: var(--red-text); }
-
-.task-day-late {
-  flex-shrink: 0;
-  padding: 1px 6px;
-  font-size: var(--fz-xs);
-  font-weight: 700;
-  color: var(--red-text);
-  background: var(--red-bg);
-  border-radius: 8px;
-}
-
+/* ── Day groups ── */
+/* A day is only a drag scope now that it has no heading of its own, so its
+   rows sit at the same pitch as every other row in the pane. */
+.task-day,
 .task-day-list {
   display: flex;
   flex-direction: column;
@@ -4285,6 +4265,29 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 .task-row--done .task-title {
   text-decoration: line-through;
   color: var(--text-muted);
+}
+
+/* The row's date, and the only thing that says how urgent a task is: today
+   in the normal text colour, upcoming blue, overdue red. flex-basis 100%
+   drops it onto its own line under the title, above the chips. */
+.task-date {
+  flex: 1 1 100%;
+  min-width: 0;
+  font-size: var(--fz-xs);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.task-date--today  { color: var(--text); }
+.task-date--future { color: var(--blue-text); }
+.task-date--past   { color: var(--red-text); }
+
+.task-date-late { font-weight: 700; }
+
+/* A finished task has nothing urgent left to say */
+.task-row--done .task-date {
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 .task-meta {
