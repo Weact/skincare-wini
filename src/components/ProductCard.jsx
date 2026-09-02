@@ -145,6 +145,10 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
     setDismissedKey(null)
   }
 
+  function handleWarningDateChange(e) {
+    onUpdate({ warningDate: e.target.value || null })
+  }
+
   function applySuggestion() {
     onUpdate({ expirationDate: suggestion })
     setSuggestion(null)
@@ -172,7 +176,7 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const showBody = expanded && !selectMode
 
   return (
-    <div className={`card card--${status.type}${selectMode && selected ? ' card--selected' : ''}`}>
+    <div id={'product-' + product.id} className={`card card--${status.type}${selectMode && selected ? ' card--selected' : ''}`}>
       <div className="card-header" onClick={selectMode ? onToggleSelect : onToggleExpanded}>
         {selectMode && (
           <input
@@ -229,6 +233,9 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
             </span>
           )}
           <span className={`badge badge--${status.type}`}>{status.label}</span>
+          {status.note && (
+            <span className={`badge badge--note badge--note-${status.noteTone}`}>{status.note}</span>
+          )}
           {!selectMode && (
             <span className={`chevron ${expanded ? 'chevron--up' : ''}`}>
               <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
@@ -465,7 +472,7 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
 
           <div className="field">
             <label className="field-label">Expiration date</label>
-            <div className="field-hint">Can be set manually or via the suggestion below</div>
+            <div className="field-hint">Type it as DD/MM/YYYY, pick it from the calendar, or use the suggestion below</div>
             <DateInput
               value={product.expirationDate}
               onChange={handleExpirationDateChange}
@@ -493,6 +500,18 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
               </div>
             </div>
           )}
+
+          <div className="field">
+            <label className="field-label">Send warning</label>
+            <div className="field-hint">
+              From this date the card counts down the days left — sealed or open.
+              A reminder notification is coming in a later update.
+            </div>
+            <DateInput
+              value={product.warningDate}
+              onChange={handleWarningDateChange}
+            />
+          </div>
 
           <button
             type="button"

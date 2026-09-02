@@ -3,15 +3,27 @@
 // list stays readable when several shipped in the same month.
 export const CHANGELOG = [
   {
+    version: '2.5',
+    title: 'Expiry warnings',
+    date: 'Sep 2026',
+    entries: [
+      'New Expiring button at the top of the skincare tracker — every product dated to run out before the year is up, soonest first, cutting across all your categories. Tap one to jump straight to its card',
+      'Set a "Send warning" date on any product: from that day the card counts down the days left, sealed or open. The reminder notification itself lands in a later update',
+      'Sealed products now show how much of their printed date is left, in a second chip beside the Sealed badge — no more guessing which sealed jar to open first',
+      'Long horizons read as months or years instead of a four-digit day count: "3y left" rather than "1094d left". Anything inside two months still counts in days',
+      'Dates can now be typed straight in as DD/MM/YYYY, on top of the presets and the calendar picker — the slashes fill themselves in as you type',
+      'Added a 9 month option to "Use within" on products',
+    ],
+  },
+  {
     version: '2.4',
     title: 'Task dates & Expired',
-    date: 'Aug 2026',
+    date: 'Sep 2026',
     entries: [
       'Overdue tasks moved out of Today into their own Expired list, sitting beside Future with the same drag-to-resize divider and collapse-to-rail as Today and This week',
       'Every task now shows its own date on the card: the normal text colour for today, blue for anything still coming up, red once it is overdue — with how late it already is alongside it',
       'Day headings are gone from the task lists — now that each task carries its date, the tasks in a list run as one continuous column',
       'Adding a task from the Expired list dates it yesterday, so it stays in the list you added it from',
-      'Added a 9 month option to "Use within" on products',
     ],
   },
   {

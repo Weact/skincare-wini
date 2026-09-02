@@ -553,6 +553,17 @@ body {
 .badge--expiring { background: var(--amber-bg);    color: var(--amber-text); }
 .badge--expired  { background: var(--red-bg);      color: var(--red-text); }
 .badge--empty    { background: var(--empty-bg);    color: var(--empty-text); }
+/* Second, smaller chip beside the badge. It carries the time left on a date
+   the badge itself doesn't spell out — a sealed product stays "Sealed", but
+   its printed expiry is still running down, and this is where you see it. */
+.badge--note {
+  background: var(--empty-bg);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.badge--note-expiring { background: var(--amber-bg); color: var(--amber-text); }
+.badge--note-expired  { background: var(--red-bg);   color: var(--red-text); }
 
 /* Expand chevron */
 .chevron {
@@ -717,42 +728,37 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 }
 
 /* ── Custom date input ── */
+/* A typable DD/MM/YYYY text box with the native picker parked under the
+   calendar icon at its right edge. */
 .date-field {
   position: relative;
 }
 
-.date-display {
+.date-text {
+  padding-right: 44px;
+}
+
+.date-picker-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 44px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 16px;
-  padding: 11px 13px;
-  border: 1.5px solid var(--border-input);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text);
-  min-height: 46px;
-  /* Let clicks fall through to the native input on top */
-  pointer-events: none;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.date-field:focus-within .date-display {
-  border-color: var(--primary);
-  background: var(--surface);
-}
-
-.date-placeholder {
+  justify-content: center;
   color: var(--text-light);
+  cursor: pointer;
 }
 
 .date-icon {
-  color: var(--text-light);
   flex-shrink: 0;
+  pointer-events: none;
 }
 
-/* Transparent native input sits on top — its text is invisible, but it
-   receives clicks/taps and opens the OS date picker */
+/* Transparent native input covers the icon and nothing else — it takes the
+   tap and opens the OS date picker, leaving the rest of the field free to
+   type into */
 .date-native {
   position: absolute;
   inset: 0;
@@ -762,6 +768,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   cursor: pointer;
   font-size: 16px; /* prevent iOS zoom */
   border: none;
+  padding: 0;
   background: transparent;
 }
 
@@ -955,6 +962,132 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 
 .selection-delete-btn:active {
   opacity: 0.75;
+}
+/* ── Expiring-this-year button + list ── */
+.selection-bar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.expiring-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Only carries the alert colour when something is actually dated to expire */
+.expiring-btn--alert {
+  border-color: var(--amber);
+  color: var(--amber-text);
+  background: var(--amber-bg);
+}
+
+.expiring-btn-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.expiring-btn-count {
+  min-width: 19px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--amber);
+  color: #fff;
+  font-size: var(--fz-sm);
+  font-weight: 700;
+  line-height: 19px;
+  text-align: center;
+}
+
+.expiring-btn:active {
+  opacity: 0.75;
+}
+
+.expiring-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.expiring-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.12s;
+}
+
+.expiring-row:hover {
+  border-color: var(--border-input);
+}
+
+.expiring-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.expiring-thumb--blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 16px;
+}
+
+.expiring-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.expiring-name {
+  font-size: var(--fz-base);
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expiring-meta {
+  font-size: var(--fz-sm);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The modal body stacks its children 24px apart, which is far too airy for a
+   hint sitting directly on top of its own list */
+.modal-body .expiring-list {
+  margin-top: -16px;
 }
 
 /* ── Bulk delete confirmation modal ── */

@@ -58,27 +58,112 @@ export function getDaysUntil(dateStr) {
   return Math.ceil((target - today) / 86400000)
 }
 
+// Coarse remaining time, for anything far enough out that an exact day count
+// is noise — a sealed bottle reading "1094d left" tells you much less than
+// "3y left" does.
+export function formatTimeLeft(days) {
+  if (days === null || days < 0) return null
+  if (days === 0) return 'Expires today'
+  if (days < 60) return `${days}d left`
+  if (days < 550) return `${Math.round(days / 30)}mo left`
+  return `${Math.round(days / 365)}y left`
+}
+
+// Has the product's own "Send warning" date been reached? From that day on
+// the card switches to an exact day count and an amber tone, whether or not
+// the product has been opened. (The notification itself is not built yet.)
+export function isWarningActive(product, today = todayISO()) {
+  if (!product.warningDate || !product.expirationDate) return false
+  return today >= product.warningDate
+}
+
+// `label` is the badge; `note` is the smaller chip beside it, carrying the
+// time left when the badge itself doesn't already say it (a sealed product
+// stays "Sealed" — nothing has started running down — but its printed date
+// is still ticking, and that's what the note shows).
 export function getProductStatus(product) {
   if (product.emptiedAt) {
     return { type: 'empty', label: 'Empty' }
   }
+  const days = getDaysUntil(product.expirationDate)
+  const warned = days !== null && days >= 0 && isWarningActive(product)
+
   if (!product.openingDate) {
-    return { type: 'sealed', label: 'Sealed' }
+    if (days === null) {
+      return { type: 'sealed', label: 'Sealed' }
+    }
+    if (days < 0) {
+      return { type: 'sealed', label: 'Sealed', note: 'Past expiry', noteTone: 'expired' }
+    }
+    return {
+      type: 'sealed',
+      label: 'Sealed',
+      note: warned ? `${days}d left` : formatTimeLeft(days),
+      noteTone: warned || days <= 30 ? 'expiring' : 'muted',
+    }
   }
-  if (!product.expirationDate) {
+  if (days === null) {
     return { type: 'open', label: 'Open' }
   }
-  const days = getDaysUntil(product.expirationDate)
   if (days < 0) {
     return { type: 'expired', label: 'Expired' }
   }
   if (days === 0) {
     return { type: 'expiring', label: 'Expires today' }
   }
-  if (days <= 30) {
+  if (days <= 30 || warned) {
     return { type: 'expiring', label: `${days}d left` }
   }
-  return { type: 'open', label: `${days}d left` }
+  return { type: 'open', label: formatTimeLeft(days) }
+}
+
+// The products the Expiring button surfaces: everything whose printed date
+// falls inside the current calendar year, soonest first. Emptied products
+// are left out — they're already dealt with.
+export function getExpiringThisYear(products) {
+  const year = new Date().getFullYear()
+  return products
+    .filter(p => !p.emptiedAt && p.expirationDate && Number(p.expirationDate.slice(0, 4)) === year)
+    .sort((a, b) => a.expirationDate.localeCompare(b.expirationDate))
+}
+
+// Digits typed into a DD/MM/YYYY box, re-slashed as they arrive, so manual
+// entry never fights the separators.
+export function maskDateInput(raw) {
+  const text = (raw || '').replace(/[^0-9\/]/g, '')
+  if (!text.includes('/')) {
+    const digits = text.slice(0, 8)
+    return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join('/')
+  }
+  // Separators the user typed decide where each segment ends, so '2/4/2027'
+  // stays the 2nd of April rather than being re-cut into '24/20/27'. Digits
+  // past a segment's width spill into the next one, so pasting or typing on
+  // past a slash can't wedge the field.
+  const chunks = text.split('/')
+  const out = []
+  let spill = ''
+  for (let i = 0; i < 3; i++) {
+    const width = i === 2 ? 4 : 2
+    const seg = spill + (chunks[i] ?? '')
+    spill = seg.slice(width)
+    out.push(seg.slice(0, width))
+    if (chunks.length <= i + 1 && !spill) break
+  }
+  return out.join('/')
+}
+
+// 'DD/MM/YYYY' -> 'YYYY-MM-DD', or null when it isn't a real calendar day.
+// A single-digit day or month is accepted — blur rewrites the box from the
+// stored value, so '2/4/2027' becomes '02/04/2027' as soon as you leave it.
+// The round-trip check is what rejects 31/02 and friends, which Date happily
+// rolls over into the next month.
+export function parseDisplayDate(text) {
+  const m = /^([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{4})$/.exec((text || '').trim())
+  if (!m) return null
+  const [, dd, mm, yyyy] = m.map(Number)
+  const d = new Date(yyyy, mm - 1, dd)
+  if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null
+  return toISODate(d)
 }
 
 // Monday-first week containing `dateStr`, as inclusive ISO bounds. Matches

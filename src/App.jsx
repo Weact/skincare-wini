@@ -19,6 +19,7 @@ import { CSS } from '@dnd-kit/utilities'
 import ProductCard from './components/ProductCard'
 import CategorySection from './components/CategorySection'
 import ExpiredSection from './components/ExpiredSection'
+import ExpiringModal from './components/ExpiringModal'
 import EmptySection from './components/EmptySection'
 import AuthButton from './components/AuthButton'
 import ChangelogModal from './components/ChangelogModal'
@@ -51,7 +52,7 @@ import WelcomeScreen from './components/WelcomeScreen'
 import SharedProfileView from './components/SharedProfileView'
 import FriendsPanel from './components/FriendsPanel'
 import { resizeImage } from './utils/imageUtils'
-import { getProductStatus } from './utils/dateUtils'
+import { getExpiringThisYear, getProductStatus } from './utils/dateUtils'
 import { LATEST_VERSION } from './changelog'
 import { TRACKERS } from './constants'
 import './App.css'
@@ -248,6 +249,9 @@ export default function App() {
     })
   }
 
+  // The Expiring list — everything dated to run out before the year is up
+  const [showExpiring, setShowExpiring] = useState(false)
+
   // Bulk-select mode for the product list (Select / Delete N)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedProductIds, setSelectedProductIds] = useState(() => new Set())
@@ -437,13 +441,23 @@ export default function App() {
     const id = generateId()
     await addProduct({
       id, name: '', openingDate: null, expirationDate: null,
-      usageMonths: null, photo, createdAt: new Date().toISOString(),
+      usageMonths: null, warningDate: null, photo, createdAt: new Date().toISOString(),
     })
     setNewProductId(id)
     setExpandedIds(prev => new Set(prev).add(id))
     // New products always start uncategorized — there's no way yet to add
     // directly into a specific category from the FABs
     showToast('Added product to Uncategorized')
+  }
+
+  // Picking a product out of the Expiring list opens its card in place —
+  // the expand has to land before we can scroll to the finished height.
+  function handleJumpToProduct(id) {
+    setShowExpiring(false)
+    setExpandedIds(prev => new Set(prev).add(id))
+    setTimeout(() => {
+      document.getElementById('product-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 60)
   }
 
   // The + FAB's menu — scrolls up too, since the category/type forms it
@@ -673,6 +687,7 @@ export default function App() {
   // Uncategorized) regardless of their real categoryId/typeId — status is
   // computed live from the expiration date, so this stays in sync
   // automatically and reverses itself if the date is edited back.
+  const expiringThisYear = getExpiringThisYear(displayProducts)
   const expiredProducts = displayProducts.filter(p => getProductStatus(p).type === 'expired')
   const emptyProducts = displayProducts.filter(p => getProductStatus(p).type === 'empty')
   const groupableProducts = displayProducts.filter(p => {
@@ -902,6 +917,20 @@ export default function App() {
               count={selectedProductIds.size}
               onToggle={toggleSelectMode}
               onDeleteClick={() => setShowDeleteConfirm(true)}
+              rightSlot={
+                <button
+                  type="button"
+                  className={`expiring-btn${expiringThisYear.length > 0 ? ' expiring-btn--alert' : ''}`}
+                  onClick={() => setShowExpiring(true)}
+                  title="Products expiring this year"
+                >
+                  <span className="expiring-btn-icon" aria-hidden="true">⚠️</span>
+                  Expiring
+                  {expiringThisYear.length > 0 && (
+                    <span className="expiring-btn-count">{expiringThisYear.length}</span>
+                  )}
+                </button>
+              }
             />
 
             {/* ── New category form — opened from the + FAB's menu ── */}
@@ -1146,6 +1175,15 @@ export default function App() {
 
       <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFAB} />
 
+      {showExpiring && (
+        <ExpiringModal
+          products={expiringThisYear}
+          categories={categories}
+          types={types}
+          onSelect={handleJumpToProduct}
+          onClose={() => setShowExpiring(false)}
+        />
+      )}
       {showChangelog && (
         <ChangelogModal onClose={() => setShowChangelog(false)} />
       )}
