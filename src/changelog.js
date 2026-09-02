@@ -3,6 +3,18 @@
 // list stays readable when several shipped in the same month.
 export const CHANGELOG = [
   {
+    version: '2.4',
+    title: 'Task dates & Expired',
+    date: 'Aug 2026',
+    entries: [
+      'Overdue tasks moved out of Today into their own Expired list, sitting beside Future with the same drag-to-resize divider and collapse-to-rail as Today and This week',
+      'Every task now shows its own date on the card: the normal text colour for today, blue for anything still coming up, red once it is overdue — with how late it already is alongside it',
+      'Day headings are gone from the task lists — now that each task carries its date, the tasks in a list run as one continuous column',
+      'Adding a task from the Expired list dates it yesterday, so it stays in the list you added it from',
+      'Added a 9 month option to "Use within" on products',
+    ],
+  },
+  {
     version: '2.3',
     title: 'Tasks tracker',
     date: 'Aug 2026',

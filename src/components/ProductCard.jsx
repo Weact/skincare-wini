@@ -10,6 +10,7 @@ const USAGE_OPTIONS = [
   { value: 2, label: '2 months' },
   { value: 3, label: '3 months' },
   { value: 6, label: '6 months' },
+  { value: 9, label: '9 months' },
   { value: 12, label: '12 months' },
   { value: 24, label: '24 months' },
 ]
