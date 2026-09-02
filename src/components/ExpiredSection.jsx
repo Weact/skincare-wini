@@ -13,6 +13,7 @@ export default function ExpiredSection({
   events,
   onOpenEvent,
   onUpdateProduct,
+  onDuplicateProduct,
   onDeleteProduct,
   newProductId,
   expandedIds,
@@ -47,6 +48,7 @@ export default function ExpiredSection({
                 product={product}
                 onUpdate={updates => onUpdateProduct(product.id, updates)}
                 onDelete={() => onDeleteProduct(product.id)}
+                onDuplicate={count => onDuplicateProduct(product, count)}
                 startExpanded={product.id === newProductId}
                 expanded={expandedIds.has(product.id)}
                 onToggleExpanded={() => onToggleExpanded(product.id)}

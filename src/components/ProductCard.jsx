@@ -5,6 +5,14 @@ import { TIME_OF_DAY } from '../constants'
 import DateInput from './DateInput'
 import EmojiPicker from './EmojiPicker'
 
+// The Duplicate box is free text while you're typing in it, so the count is
+// only pinned down at the moment it's used.
+function clampCopies(raw) {
+  const n = parseInt(raw, 10)
+  if (!n || n < 1) return 1
+  return Math.min(n, 99)
+}
+
 const USAGE_OPTIONS = [
   { value: 1, label: '1 month' },
   { value: 2, label: '2 months' },
@@ -15,11 +23,13 @@ const USAGE_OPTIONS = [
   { value: 24, label: '24 months' },
 ]
 
-export default function ProductCard({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories = [], types = [], onCreateType, events = [], onOpenEvent, dragHandleProps, selectMode = false, selected = false, onToggleSelect, readOnly = false }) {
+export default function ProductCard({ product, onUpdate, onDelete, onDuplicate, startExpanded, expanded, onToggleExpanded, categories = [], types = [], onCreateType, events = [], onOpenEvent, dragHandleProps, selectMode = false, selected = false, onToggleSelect, readOnly = false }) {
   const [name, setName] = useState(product.name || '')
+  const [usageValue, setUsageValue] = useState(product.usageMonths || null)
   const [suggestion, setSuggestion] = useState(null)
   const [dismissedKey, setDismissedKey] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [copies, setCopies] = useState('1')
   const [typeInput, setTypeInput] = useState('')
   const [typeEmoji, setTypeEmoji] = useState('')
   const [showTypeEmojiPicker, setShowTypeEmojiPicker] = useState(false)
@@ -28,9 +38,11 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const confirmTimerRef = useRef(null)
   const photoInputRef = useRef(null)
   const typeEmojiRef = useRef(null)
+  const usageTimerRef = useRef(null)
 
   const typesForCategory = types.filter(t => t.categoryId === product.categoryId)
   const currentType = types.find(t => t.id === product.typeId)
+  const isCustomUsage = usageValue != null && !USAGE_OPTIONS.some(o => o.value === usageValue)
 
   const typeSuggestions = typesForCategory
     .filter(t => t.id !== product.typeId)
@@ -105,6 +117,11 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
     setName(product.name || '')
   }, [product.name])
 
+  // Same for the usage period, which the slider also holds locally
+  useEffect(() => {
+    setUsageValue(product.usageMonths || null)
+  }, [product.usageMonths])
+
   // Auto-suggest expiration when opening date + usage months are both set
   useEffect(() => {
     if (!product.openingDate || !product.usageMonths) {
@@ -138,11 +155,26 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
     setDismissedKey(`${product.openingDate}+${product.usageMonths}`)
   }
 
-  function handleUsageMonthsChange(e) {
-    const val = e.target.value ? parseInt(e.target.value) : null
+  function commitUsageMonths(val) {
     onUpdate({ usageMonths: val })
     // Reset dismissal so suggestion can appear for new usage period
     setDismissedKey(null)
+  }
+
+  function handleUsageMonthsChange(e) {
+    const val = e.target.value ? parseInt(e.target.value) : null
+    clearTimeout(usageTimerRef.current)
+    setUsageValue(val)
+    commitUsageMonths(val)
+  }
+
+  // The slider fires on every step of a drag. The readout and the dropdown
+  // follow immediately, but only the month you settle on gets written.
+  function handleUsageRangeChange(e) {
+    const val = parseInt(e.target.value)
+    setUsageValue(val)
+    clearTimeout(usageTimerRef.current)
+    usageTimerRef.current = setTimeout(() => commitUsageMonths(val), 300)
   }
 
   function handleWarningDateChange(e) {
@@ -156,6 +188,11 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
 
   function dismissSuggestion() {
     setDismissedKey(`${product.openingDate}+${product.usageMonths}`)
+  }
+
+  function handleDuplicate() {
+    onDuplicate(clampCopies(copies))
+    setCopies('1')
   }
 
   function handleDeleteClick() {
@@ -458,16 +495,39 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
 
           <div className="field">
             <label className="field-label">Use within</label>
+            <div className="field-hint">
+              Pick a common period, or drag the slider for any number of months from 1 to 24
+            </div>
             <select
               className="field-input field-select"
-              value={product.usageMonths || ''}
+              value={usageValue || ''}
               onChange={handleUsageMonthsChange}
             >
               <option value="">Not specified</option>
               {USAGE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
+              {/* A period the presets don't cover still needs something to
+                  select, or the dropdown drops back to "Not specified" */}
+              {isCustomUsage && (
+                <option value={usageValue}>{usageValue} months</option>
+              )}
             </select>
+            <div className="usage-slider">
+              <input
+                type="range"
+                min="1"
+                max="24"
+                step="1"
+                className="usage-range"
+                value={usageValue || 1}
+                onChange={handleUsageRangeChange}
+                aria-label="Use within, in months"
+              />
+              <span className="usage-slider-value">
+                {usageValue ? `${usageValue} month${usageValue === 1 ? '' : 's'}` : 'Not set'}
+              </span>
+            </div>
           </div>
 
           <div className="field">
@@ -512,6 +572,31 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
               onChange={handleWarningDateChange}
             />
           </div>
+
+          {onDuplicate && (
+            <div className="field">
+              <label className="field-label">Duplicate</label>
+              <div className="field-hint">
+                Adds more cards with everything above already filled in — one per unit you own
+              </div>
+              <div className="duplicate-row">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  max="99"
+                  className="qty-input"
+                  value={copies}
+                  onChange={e => setCopies(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
+                  onBlur={() => setCopies(String(clampCopies(copies)))}
+                  aria-label="How many copies to add"
+                />
+                <button type="button" className="duplicate-btn" onClick={handleDuplicate}>
+                  {clampCopies(copies) === 1 ? 'Make 1 copy' : `Make ${clampCopies(copies)} copies`}
+                </button>
+              </div>
+            </div>
+          )}
 
           <button
             type="button"

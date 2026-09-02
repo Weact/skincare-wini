@@ -1,10 +1,9 @@
 import { useEffect } from 'react'
-import { formatDisplayDate, getDaysUntil } from '../utils/dateUtils'
+import { formatDisplayDate, getDaysUntil, getProductStatus } from '../utils/dateUtils'
 
-// Everything with a printed expiry inside the current calendar year, soonest
-// first — the list behind the Expiring button. Deliberately flat and sorted
-// by date alone, cutting across every category: the question it answers is
-// "what runs out next", not "what's in my routine".
+// The list behind the Expiring button — see getExpiringSoon for what gets in.
+// Deliberately flat and sorted by date alone, cutting across every category:
+// the question it answers is "what runs out next", not "what's in my routine".
 export default function ExpiringModal({ products, categories, types, onSelect, onClose }) {
   useEffect(() => {
     function handle(e) { if (e.key === 'Escape') onClose() }
@@ -12,13 +11,11 @@ export default function ExpiringModal({ products, categories, types, onSelect, o
     return () => document.removeEventListener('keydown', handle)
   }, [onClose])
 
-  const year = new Date().getFullYear()
-
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <span className="modal-title">Expiring in {year}</span>
+          <span className="modal-title">Expiring soon</span>
           <button className="modal-close" onClick={onClose} aria-label="Close">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -29,12 +26,13 @@ export default function ExpiringModal({ products, categories, types, onSelect, o
         <div className="modal-body">
           {products.length === 0 ? (
             <p className="field-hint">
-              Nothing in your collection is dated to expire before the end of {year}.
+              Nothing in your collection is dated to expire in the next 12 months.
             </p>
           ) : (
             <>
               <p className="field-hint">
-                Soonest first. Tap one to open its card.
+                Open or sealed products with less than 12 months left, plus sealed
+                products already past their date. Soonest first — tap one to open its card.
               </p>
               <ul className="expiring-list">
                 {products.map(product => {
@@ -43,6 +41,9 @@ export default function ExpiringModal({ products, categories, types, onSelect, o
                   const type = types.find(t => t.id === product.typeId)
                   const place = [cat?.name, type?.name].filter(Boolean).join(' · ')
                   const tone = days < 0 ? 'expired' : days <= 30 ? 'expiring' : 'open'
+                  // A sealed product keeps its Sealed badge here too — the
+                  // countdown alone reads as though it were already open
+                  const sealed = getProductStatus(product).type === 'sealed'
                   return (
                     <li key={product.id}>
                       <button
@@ -62,12 +63,15 @@ export default function ExpiringModal({ products, categories, types, onSelect, o
                             {place ? ` · ${place}` : ''}
                           </span>
                         </span>
-                        <span className={`badge badge--${tone}`}>
-                          {days < 0
-                            ? `Expired ${-days}d ago`
-                            : days === 0
-                              ? 'Expires today'
-                              : `${days}d left`}
+                        <span className="expiring-badges">
+                          {sealed && <span className="badge badge--sealed">Sealed</span>}
+                          <span className={`badge badge--${tone}`}>
+                            {days < 0
+                              ? `Expired ${-days}d ago`
+                              : days === 0
+                                ? 'Expires today'
+                                : `${days}d left`}
+                          </span>
                         </span>
                       </button>
                     </li>

@@ -117,13 +117,24 @@ export function getProductStatus(product) {
   return { type: 'open', label: formatTimeLeft(days) }
 }
 
-// The products the Expiring button surfaces: everything whose printed date
-// falls inside the current calendar year, soonest first. Emptied products
-// are left out — they're already dealt with.
-export function getExpiringThisYear(products) {
-  const year = new Date().getFullYear()
+// The products the Expiring button surfaces, soonest first. Two ways in:
+// anything still ahead of its printed date but less than 12 months out, and
+// sealed products already past it — those keep their Sealed badge and stay in
+// their category rather than dropping into the Expired section, so this list
+// is the only place they'd ever be noticed. An opened product past its date is
+// left out: the Expired section already has it. So are used-up products.
+export function getExpiringSoon(products) {
+  const today = todayISO()
+  const cutoff = new Date()
+  cutoff.setHours(0, 0, 0, 0)
+  cutoff.setMonth(cutoff.getMonth() + 12)
+  const limit = toISODate(cutoff)
   return products
-    .filter(p => !p.emptiedAt && p.expirationDate && Number(p.expirationDate.slice(0, 4)) === year)
+    .filter(p => {
+      if (p.emptiedAt || !p.expirationDate) return false
+      if (p.expirationDate < today) return !p.openingDate
+      return p.expirationDate < limit
+    })
     .sort((a, b) => a.expirationDate.localeCompare(b.expirationDate))
 }
 

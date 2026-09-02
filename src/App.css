@@ -963,6 +963,113 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 .selection-delete-btn:active {
   opacity: 0.75;
 }
+/* ── Duplicate a finished product into N more cards ── */
+.duplicate-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.qty-input {
+  width: 62px;
+  flex-shrink: 0;
+  font-size: 16px; /* prevent iOS zoom */
+  font-family: inherit;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text);
+  background: var(--bg);
+  border: 1.5px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  padding: 11px 4px;
+  min-height: 46px;
+  outline: none;
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
+}
+
+.qty-input:focus {
+  border-color: var(--primary);
+}
+
+/* The native spinners are too small to hit on touch and eat the width a
+   two-digit number needs, so the field is typed into instead */
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.duplicate-btn {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  font-size: var(--fz-md);
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.duplicate-btn:active {
+  opacity: 0.7;
+}
+/* ── "Use within" slider — every month from 1 to 24, alongside the presets ── */
+.usage-slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.usage-range {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-input);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.usage-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 4px var(--primary-shadow);
+  cursor: pointer;
+}
+
+.usage-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 4px var(--primary-shadow);
+  cursor: pointer;
+}
+
+.usage-slider-value {
+  font-size: var(--fz-sm);
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 68px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 /* ── Expiring-this-year button + list ── */
 .selection-bar-right {
   margin-left: auto;
@@ -1040,6 +1147,14 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 
 .expiring-row:hover {
   border-color: var(--border-input);
+}
+
+/* Sealed products carry both chips: the Sealed badge and the countdown */
+.expiring-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .expiring-thumb {

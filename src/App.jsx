@@ -52,7 +52,7 @@ import WelcomeScreen from './components/WelcomeScreen'
 import SharedProfileView from './components/SharedProfileView'
 import FriendsPanel from './components/FriendsPanel'
 import { resizeImage } from './utils/imageUtils'
-import { getExpiringThisYear, getProductStatus } from './utils/dateUtils'
+import { getExpiringSoon, getProductStatus } from './utils/dateUtils'
 import { LATEST_VERSION } from './changelog'
 import { TRACKERS } from './constants'
 import './App.css'
@@ -450,6 +450,29 @@ export default function App() {
     showToast('Added product to Uncategorized')
   }
 
+  // Copies a finished product as many times as asked. `order` comes across
+  // untouched so the copies land right after the original — order ties break
+  // on createdAt, hence the millisecond stagger. emptiedAt deliberately does
+  // not: a duplicate is another unopened unit, not another used-up one.
+  async function handleDuplicateProduct(product, count) {
+    const n = Math.min(Math.max(parseInt(count, 10) || 1, 1), 99)
+    const now = Date.now()
+    await Promise.all(Array.from({ length: n }, (_, i) => addProduct({
+      id: generateId(),
+      name: product.name || '',
+      categoryId: product.categoryId ?? null,
+      typeId: product.typeId ?? null,
+      openingDate: product.openingDate ?? null,
+      expirationDate: product.expirationDate ?? null,
+      usageMonths: product.usageMonths ?? null,
+      warningDate: product.warningDate ?? null,
+      photo: product.photo ?? null,
+      order: product.order ?? null,
+      createdAt: new Date(now + i).toISOString(),
+    })))
+    showToast(n === 1 ? 'Added 1 copy' : `Added ${n} copies`)
+  }
+
   // Picking a product out of the Expiring list opens its card in place —
   // the expand has to land before we can scroll to the finished height.
   function handleJumpToProduct(id) {
@@ -687,7 +710,7 @@ export default function App() {
   // Uncategorized) regardless of their real categoryId/typeId — status is
   // computed live from the expiration date, so this stays in sync
   // automatically and reverses itself if the date is edited back.
-  const expiringThisYear = getExpiringThisYear(displayProducts)
+  const expiringSoon = getExpiringSoon(displayProducts)
   const expiredProducts = displayProducts.filter(p => getProductStatus(p).type === 'expired')
   const emptyProducts = displayProducts.filter(p => getProductStatus(p).type === 'empty')
   const groupableProducts = displayProducts.filter(p => {
@@ -920,14 +943,14 @@ export default function App() {
               rightSlot={
                 <button
                   type="button"
-                  className={`expiring-btn${expiringThisYear.length > 0 ? ' expiring-btn--alert' : ''}`}
+                  className={`expiring-btn${expiringSoon.length > 0 ? ' expiring-btn--alert' : ''}`}
                   onClick={() => setShowExpiring(true)}
-                  title="Products expiring this year"
+                  title="Products expiring in the next 12 months"
                 >
                   <span className="expiring-btn-icon" aria-hidden="true">⚠️</span>
                   Expiring
-                  {expiringThisYear.length > 0 && (
-                    <span className="expiring-btn-count">{expiringThisYear.length}</span>
+                  {expiringSoon.length > 0 && (
+                    <span className="expiring-btn-count">{expiringSoon.length}</span>
                   )}
                 </button>
               }
@@ -1016,6 +1039,7 @@ export default function App() {
                       <ProductCard
                         product={product}
                         onUpdate={updates => updateProduct(product.id, updates)}
+                        onDuplicate={count => handleDuplicateProduct(product, count)}
                         onDelete={() => handleDeleteProduct(product.id)}
                         startExpanded={product.id === newProductId}
                         expanded={expandedIds.has(product.id)}
@@ -1053,6 +1077,7 @@ export default function App() {
                       events={events}
                       onOpenEvent={handleOpenEvent}
                       onUpdateProduct={updateProduct}
+                      onDuplicateProduct={handleDuplicateProduct}
                       onDeleteProduct={handleDeleteProduct}
                       onUpdateCategory={updateCategory}
                       onDeleteCategory={handleDeleteCategory}
@@ -1078,6 +1103,7 @@ export default function App() {
                     events={events}
                     onOpenEvent={handleOpenEvent}
                     onUpdateProduct={updateProduct}
+                    onDuplicateProduct={handleDuplicateProduct}
                     onDeleteProduct={handleDeleteProduct}
                     onUpdateCategory={() => {}}
                     onDeleteCategory={() => {}}
@@ -1139,6 +1165,7 @@ export default function App() {
                 events={events}
                 onOpenEvent={handleOpenEvent}
                 onUpdateProduct={updateProduct}
+                onDuplicateProduct={handleDuplicateProduct}
                 onDeleteProduct={handleDeleteProduct}
                 newProductId={newProductId}
                 expandedIds={expandedIds}
@@ -1160,6 +1187,7 @@ export default function App() {
                 events={events}
                 onOpenEvent={handleOpenEvent}
                 onUpdateProduct={updateProduct}
+                onDuplicateProduct={handleDuplicateProduct}
                 onDeleteProduct={handleDeleteProduct}
                 newProductId={newProductId}
                 expandedIds={expandedIds}
@@ -1177,7 +1205,7 @@ export default function App() {
 
       {showExpiring && (
         <ExpiringModal
-          products={expiringThisYear}
+          products={expiringSoon}
           categories={categories}
           types={types}
           onSelect={handleJumpToProduct}
