@@ -143,6 +143,11 @@ export default function TasksTracker({
   const formSlotRef = useRef(null)
   const [expandedIds, setExpandedIds] = useState(() => new Set())
   const [collapsedMonths, setCollapsedMonths] = useState(() => new Set())
+  // Completed only ever grows, so it starts folded away and remembers
+  // whether you unfolded it.
+  const [completedOpen, setCompletedOpen] = useState(
+    () => localStorage.getItem('tasksCompletedOpen') === '1',
+  )
 
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
@@ -178,9 +183,17 @@ export default function TasksTracker({
   )
 
   useEffect(() => {
+    if (completedOpen) localStorage.setItem('tasksCompletedOpen', '1')
+    else localStorage.removeItem('tasksCompletedOpen')
+  }, [completedOpen])
+
+  useEffect(() => {
     if (!liveOrder) return
+    // Completed tasks are out of the bucket on screen, so they must be out
+    // of the confirmation too — otherwise ticking one off mid-drag leaves
+    // the prediction permanently unconfirmed.
     const confirmed = tasks
-      .filter(t => bucketOf(t) === liveOrder.bucket)
+      .filter(t => !t.done && bucketOf(t) === liveOrder.bucket)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       .map(t => t.id)
     const matches = confirmed.length === liveOrder.ids.length &&
@@ -231,20 +244,33 @@ export default function TasksTracker({
       .map(key => ({ key, days: groupByDay(map.get(key)) }))
   }
 
+  // Completed tasks leave whatever date bucket they were in and collect in
+  // their own section at the bottom — a ticked-off task is done with being
+  // scheduled, so it shouldn't keep taking up room in Today, and an expired
+  // one shouldn't keep nagging from Expired.
+  const openTasks = tasks.filter(t => !t.done)
+  const doneTasks = tasks.filter(t => t.done)
+
   // Four date buckets, mutually exclusive. Anything before today is its own
   // pane now rather than riding along at the top of Today.
-  const dated = tasks.filter(t => t.date)
+  const dated = openTasks.filter(t => t.date)
   const expiredTasks = dated.filter(t => t.date < today)
   const todayTasks = dated.filter(t => t.date === today)
   const weekTasks = dated.filter(t => t.date > today && t.date <= weekEnd)
   const futureTasks = dated.filter(t => t.date > weekEnd)
-  const undatedTasks = tasks.filter(t => !t.date)
+  const undatedTasks = openTasks.filter(t => !t.date)
 
   const expiredGroups = groupByDay(expiredTasks)
   const todayGroups = groupByDay(todayTasks)
   const weekGroups = groupByDay(weekTasks)
   const monthGroups = groupByMonth(futureTasks)
   const undatedItems = sortBucket(undatedTasks, UNDATED)
+
+  // Completed pulls from every bucket at once, so the per-bucket `order`
+  // means nothing here — most recently ticked first instead, which also
+  // puts a mistaken tap right where you can undo it.
+  const completedItems = [...doneTasks].sort((a, b) =>
+    String(b.doneAt || b.createdAt || '').localeCompare(String(a.doneAt || a.createdAt || '')))
 
   const openCount = list => list.filter(t => !t.done).length
 
@@ -342,7 +368,9 @@ export default function TasksTracker({
 
   const canDrag = !readOnly && !selectMode
 
-  function renderTask(task) {
+  // `draggable` is off in Completed: its rows come from different date
+  // buckets, and `order` is only ever meaningful within one bucket.
+  function renderTask(task, draggable = true) {
     const tone = dateTone(task.date, today)
     const overdue = tone === 'past'
     const rowProps = {
@@ -369,7 +397,7 @@ export default function TasksTracker({
       // has to say so or you lose track of what you're editing
       editing: editingId === task.id,
     }
-    return canDrag
+    return canDrag && draggable
       ? <SortableTaskRow key={task.id} {...rowProps} />
       : <TaskRow key={task.id} {...rowProps} />
   }
@@ -668,6 +696,31 @@ export default function TasksTracker({
                   {undatedItems.map(t => renderTask(t))}
                 </div>
               </SortableContext>
+            )}
+          </section>
+
+          {/* ── Completed ── */}
+          <section className="task-section">
+            <button
+              type="button"
+              className="task-section-header task-section-header--toggle"
+              onClick={() => setCompletedOpen(o => !o)}
+              aria-expanded={completedOpen}
+            >
+              <span className={`task-month-caret${completedOpen ? ' task-month-caret--open' : ''}`}>›</span>
+              <span className="task-section-title">Completed</span>
+              {completedItems.length > 0 && (
+                <span className="task-pane-count">{completedItems.length}</span>
+              )}
+            </button>
+            {completedOpen && (
+              completedItems.length === 0 ? (
+                <p className="task-pane-empty">Nothing ticked off yet.</p>
+              ) : (
+                <div className="task-day-list">
+                  {completedItems.map(t => renderTask(t, false))}
+                </div>
+              )
             )}
           </section>
         </DndContext>

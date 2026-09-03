@@ -14,7 +14,6 @@ export default function EmptySection({
   events,
   onOpenEvent,
   onUpdateProduct,
-  onDuplicateProduct,
   onDeleteProduct,
   newProductId,
   expandedIds,
@@ -49,7 +48,6 @@ export default function EmptySection({
                 product={product}
                 onUpdate={updates => onUpdateProduct(product.id, updates)}
                 onDelete={() => onDeleteProduct(product.id)}
-                onDuplicate={count => onDuplicateProduct(product, count)}
                 startExpanded={product.id === newProductId}
                 expanded={expandedIds.has(product.id)}
                 onToggleExpanded={() => onToggleExpanded(product.id)}

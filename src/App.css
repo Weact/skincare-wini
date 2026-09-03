@@ -509,12 +509,28 @@ body {
 
 /* Product name in header */
 .card-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
   font-size: var(--fz-lg);
   font-weight: 600;
+  letter-spacing: -0.1px;
+}
+
+.card-name-text {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: -0.1px;
+}
+
+/* How many units you have, riding at the end of the name */
+.card-qty {
+  flex-shrink: 0;
+  font-size: var(--fz-sm);
+  font-weight: 700;
+  color: var(--text-muted);
 }
 
 .card-name-empty {
@@ -963,15 +979,44 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 .selection-delete-btn:active {
   opacity: 0.75;
 }
-/* ── Duplicate a finished product into N more cards ── */
-.duplicate-row {
+/* ── Quantity stepper — how many units of a product you have ── */
+.qty-stepper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.qty-step-btn {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, opacity 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.qty-step-btn:active {
+  opacity: 0.7;
+}
+
+.qty-step-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .qty-input {
-  width: 62px;
+  width: 72px;
   flex-shrink: 0;
   font-size: 16px; /* prevent iOS zoom */
   font-family: inherit;
@@ -992,32 +1037,12 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   border-color: var(--primary);
 }
 
-/* The native spinners are too small to hit on touch and eat the width a
-   two-digit number needs, so the field is typed into instead */
+/* The native spinners are too small to hit on touch, and the -/+ buttons
+   already do that job */
 .qty-input::-webkit-outer-spin-button,
 .qty-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
-}
-
-.duplicate-btn {
-  flex: 1;
-  min-width: 0;
-  min-height: 46px;
-  font-size: var(--fz-md);
-  font-family: inherit;
-  font-weight: 600;
-  color: var(--primary);
-  background: var(--primary-light);
-  border: 1.5px solid var(--primary);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: opacity 0.12s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.duplicate-btn:active {
-  opacity: 0.7;
 }
 /* ── "Use within" slider — every month from 1 to 24, alongside the presets ── */
 .usage-slider {
@@ -4360,6 +4385,19 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/* Completed folds away, so its header is a button — everything the
+   static headers get, plus the button reset. */
+.task-section-header--toggle {
+  width: 100%;
+  font-family: inherit;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .task-section .task-pane-empty { padding: 16px 14px; }

@@ -5,7 +5,7 @@ import ProductCard from './ProductCard'
 import TypeSection from './TypeSection'
 import EmojiPicker from './EmojiPicker'
 
-function SortableProductItem({ product, onUpdate, onDelete, onDuplicate, startExpanded, expanded, onToggleExpanded, categories, types, onCreateType, events, onOpenEvent, selectMode, selected, onToggleSelect }) {
+function SortableProductItem({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories, types, onCreateType, events, onOpenEvent, selectMode, selected, onToggleSelect }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `prod-${product.id}`,
   })
@@ -18,7 +18,6 @@ function SortableProductItem({ product, onUpdate, onDelete, onDuplicate, startEx
         product={product}
         onUpdate={onUpdate}
         onDelete={onDelete}
-        onDuplicate={onDuplicate}
         startExpanded={startExpanded}
         expanded={expanded}
         onToggleExpanded={onToggleExpanded}
@@ -59,7 +58,6 @@ export default function CategorySection({
   events = [],         // all calendar events, for the product card's linked-dates section
   onOpenEvent,
   onUpdateProduct,
-  onDuplicateProduct,
   onDeleteProduct,
   onUpdateCategory,
   onDeleteCategory,
@@ -241,7 +239,6 @@ export default function CategorySection({
                     events={events}
                     onOpenEvent={onOpenEvent}
                     onUpdateProduct={onUpdateProduct}
-                    onDuplicateProduct={onDuplicateProduct}
                     onDeleteProduct={onDeleteProduct}
                     onUpdateType={onUpdateType}
                     onDeleteType={onDeleteType}
@@ -283,7 +280,6 @@ export default function CategorySection({
                     product={product}
                     onUpdate={updates => onUpdateProduct(product.id, updates)}
                     onDelete={() => onDeleteProduct(product.id)}
-                    onDuplicate={count => onDuplicateProduct(product, count)}
                     startExpanded={product.id === newProductId}
                     expanded={expandedIds.has(product.id)}
                     onToggleExpanded={() => onToggleExpanded(product.id)}

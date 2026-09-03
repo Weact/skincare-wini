@@ -12,9 +12,10 @@ export const CHANGELOG = [
       'Sealed products now show how much of their printed date is left, in a second chip beside the Sealed badge — no more guessing which sealed jar to open first',
       'Long horizons read as months or years instead of a four-digit day count: "3y left" rather than "1094d left". Anything inside two months still counts in days',
       'Dates can now be typed straight in as DD/MM/YYYY, on top of the presets and the calendar picker — the slashes fill themselves in as you type',
-      'Duplicate a product once you have set it up: open its card, say how many copies you need and every detail comes across — name, category, type, dates, photo. Six identical sunscreens are one card filled in and one tap',
+      'Say how many of a product you have: a quantity with − and + buttons on the card, or type the number straight in. Anything above one shows at the end of the name, so six sunscreens read as one card rather than six',
       'The "Use within" period now takes any number of months from 1 to 24, on a slider under the dropdown. The common periods are still one tap away in the dropdown itself',
       'Added a 9 month option to "Use within" on products',
+      'Ticked-off tasks now collect in their own Completed section at the bottom of the tasks tracker, newest first — they leave Today, This week, Expired, Future and Undated the moment you check them, so an old task can no longer sit in Expired nagging you after it is done',
     ],
   },
   {

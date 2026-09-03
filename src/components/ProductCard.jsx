@@ -5,9 +5,9 @@ import { TIME_OF_DAY } from '../constants'
 import DateInput from './DateInput'
 import EmojiPicker from './EmojiPicker'
 
-// The Duplicate box is free text while you're typing in it, so the count is
-// only pinned down at the moment it's used.
-function clampCopies(raw) {
+// The quantity box is free text while you're typing in it (so it can be
+// cleared and retyped), and this is what pins it back down to a real count.
+function clampQuantity(raw) {
   const n = parseInt(raw, 10)
   if (!n || n < 1) return 1
   return Math.min(n, 99)
@@ -23,13 +23,13 @@ const USAGE_OPTIONS = [
   { value: 24, label: '24 months' },
 ]
 
-export default function ProductCard({ product, onUpdate, onDelete, onDuplicate, startExpanded, expanded, onToggleExpanded, categories = [], types = [], onCreateType, events = [], onOpenEvent, dragHandleProps, selectMode = false, selected = false, onToggleSelect, readOnly = false }) {
+export default function ProductCard({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories = [], types = [], onCreateType, events = [], onOpenEvent, dragHandleProps, selectMode = false, selected = false, onToggleSelect, readOnly = false }) {
   const [name, setName] = useState(product.name || '')
   const [usageValue, setUsageValue] = useState(product.usageMonths || null)
   const [suggestion, setSuggestion] = useState(null)
   const [dismissedKey, setDismissedKey] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [copies, setCopies] = useState('1')
+  const [quantity, setQuantity] = useState(String(product.quantity ?? 1))
   const [typeInput, setTypeInput] = useState('')
   const [typeEmoji, setTypeEmoji] = useState('')
   const [showTypeEmojiPicker, setShowTypeEmojiPicker] = useState(false)
@@ -39,6 +39,7 @@ export default function ProductCard({ product, onUpdate, onDelete, onDuplicate, 
   const photoInputRef = useRef(null)
   const typeEmojiRef = useRef(null)
   const usageTimerRef = useRef(null)
+  const qtyTimerRef = useRef(null)
 
   const typesForCategory = types.filter(t => t.categoryId === product.categoryId)
   const currentType = types.find(t => t.id === product.typeId)
@@ -122,6 +123,11 @@ export default function ProductCard({ product, onUpdate, onDelete, onDuplicate, 
     setUsageValue(product.usageMonths || null)
   }, [product.usageMonths])
 
+  // …and for the quantity box
+  useEffect(() => {
+    setQuantity(String(product.quantity ?? 1))
+  }, [product.quantity])
+
   // Auto-suggest expiration when opening date + usage months are both set
   useEffect(() => {
     if (!product.openingDate || !product.usageMonths) {
@@ -190,9 +196,25 @@ export default function ProductCard({ product, onUpdate, onDelete, onDuplicate, 
     setDismissedKey(`${product.openingDate}+${product.usageMonths}`)
   }
 
-  function handleDuplicate() {
-    onDuplicate(clampCopies(copies))
-    setCopies('1')
+  // The steppers write straight away; typing waits for a pause, the same way
+  // the name field does
+  function stepQuantity(delta) {
+    const next = clampQuantity(clampQuantity(quantity) + delta)
+    clearTimeout(qtyTimerRef.current)
+    setQuantity(String(next))
+    onUpdate({ quantity: next })
+  }
+
+  function handleQuantityChange(e) {
+    const raw = e.target.value.replace(/[^0-9]/g, '').slice(0, 2)
+    setQuantity(raw)
+    clearTimeout(qtyTimerRef.current)
+    qtyTimerRef.current = setTimeout(() => onUpdate({ quantity: clampQuantity(raw) }), 400)
+  }
+
+  // An emptied or nonsense box snaps back to a real count on the way out
+  function handleQuantityBlur() {
+    setQuantity(String(clampQuantity(quantity)))
   }
 
   function handleDeleteClick() {
@@ -243,10 +265,16 @@ export default function ProductCard({ product, onUpdate, onDelete, onDuplicate, 
           <span className={`status-dot status-dot--${status.type}`} />
           <div className="card-name-block">
             <span className="card-name">
-              {name
-                ? name
-                : <span className="card-name-empty">Unnamed product</span>
-              }
+              <span className="card-name-text">
+                {name
+                  ? name
+                  : <span className="card-name-empty">Unnamed product</span>
+                }
+              </span>
+              {/* One unit is the assumption, so only a real count shows */}
+              {clampQuantity(quantity) > 1 && (
+                <span className="card-qty">×{clampQuantity(quantity)}</span>
+              )}
             </span>
             {(product.emptiedAt || product.openingDate || product.expirationDate) && (
               <span className="card-dates">
@@ -485,6 +513,42 @@ export default function ProductCard({ product, onUpdate, onDelete, onDuplicate, 
           </div>
 
           <div className="field">
+            <label className="field-label">Quantity</label>
+            <div className="field-hint">How many of this product you have</div>
+            <div className="qty-stepper">
+              <button
+                type="button"
+                className="qty-step-btn"
+                onClick={() => stepQuantity(-1)}
+                disabled={clampQuantity(quantity) <= 1}
+                aria-label="One fewer"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                max="99"
+                className="qty-input"
+                value={quantity}
+                onChange={handleQuantityChange}
+                onBlur={handleQuantityBlur}
+                aria-label="Quantity"
+              />
+              <button
+                type="button"
+                className="qty-step-btn"
+                onClick={() => stepQuantity(1)}
+                disabled={clampQuantity(quantity) >= 99}
+                aria-label="One more"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div className="field">
             <label className="field-label">Opening date</label>
             <div className="field-hint">Leave empty if the product is still sealed</div>
             <DateInput
@@ -572,31 +636,6 @@ export default function ProductCard({ product, onUpdate, onDelete, onDuplicate, 
               onChange={handleWarningDateChange}
             />
           </div>
-
-          {onDuplicate && (
-            <div className="field">
-              <label className="field-label">Duplicate</label>
-              <div className="field-hint">
-                Adds more cards with everything above already filled in — one per unit you own
-              </div>
-              <div className="duplicate-row">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  max="99"
-                  className="qty-input"
-                  value={copies}
-                  onChange={e => setCopies(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
-                  onBlur={() => setCopies(String(clampCopies(copies)))}
-                  aria-label="How many copies to add"
-                />
-                <button type="button" className="duplicate-btn" onClick={handleDuplicate}>
-                  {clampCopies(copies) === 1 ? 'Make 1 copy' : `Make ${clampCopies(copies)} copies`}
-                </button>
-              </div>
-            </div>
-          )}
 
           <button
             type="button"
