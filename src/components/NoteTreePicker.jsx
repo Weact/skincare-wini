@@ -1,15 +1,22 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useId } from 'react'
 
-// The Notes tracker's "what am I looking at" control. A native <select>
-// can't be styled past its closed state — the dropdown itself is drawn by
-// the OS — so this is a real listbox instead, which is what lets an option
-// carry its emoji, its project prefix and its note count as separate pieces
-// rather than one run of text.
+// One control for picking a place in the notes tree — used both for "what
+// am I looking at" at the top of the tracker and for "where does this go"
+// in the note and category forms. A native <select> can't be styled past
+// its closed state (the dropdown is drawn by the OS), so this is a real
+// listbox, which is what lets an option carry its emoji, its project prefix
+// and its note count as separate pieces rather than one run of text.
 //
 // `options` is a flat list of { value, emoji, label, prefix, count, group };
-// consecutive options sharing a `group` get one heading above them.
-export default function NoteScopePicker({ options, value, onChange }) {
+// consecutive options sharing a `group` get one heading above them, and
+// `count` is optional — a destination has no reason to say how full it is.
+export default function NoteTreePicker({ options, value, onChange, label = 'Show' }) {
   const [open, setOpen] = useState(false)
+  // Several of these can be on screen at once — the scope bar plus an open
+  // note form — so the listbox ids have to be per-instance or aria-controls
+  // and aria-activedescendant would all point at the first one
+  const uid = useId()
+  const listId = `note-picker-${uid}`
   // Which row the keyboard is on. Kept apart from `value` so arrowing
   // around doesn't change the view until you actually pick something.
   const [activeIndex, setActiveIndex] = useState(0)
@@ -81,26 +88,26 @@ export default function NoteScopePicker({ options, value, onChange }) {
   }
 
   return (
-    <div className="note-scope-wrap" ref={wrapRef}>
+    <div className="note-picker-wrap" ref={wrapRef}>
       <button
         type="button"
-        className={`note-scope-trigger${open ? ' note-scope-trigger--open' : ''}`}
+        className={`note-picker-trigger${open ? ' note-picker-trigger--open' : ''}`}
         onClick={() => setOpen(o => !o)}
         onKeyDown={handleKeyDown}
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-controls="note-scope-list"
-        aria-activedescendant={open ? `note-scope-opt-${activeIndex}` : undefined}
-        aria-label={`Showing ${selected?.label || 'everything'}. Change what the tracker shows`}
+        aria-controls={listId}
+        aria-activedescendant={open ? `${listId}-opt-${activeIndex}` : undefined}
+        aria-label={`${label}: ${selected?.label || 'none'}`}
       >
-        <span className="note-scope-trigger-emoji">{selected?.emoji || '📄'}</span>
-        <span className="note-scope-trigger-text">
-          {selected?.prefix && <span className="note-scope-prefix">{selected.prefix}</span>}
+        <span className="note-picker-trigger-emoji">{selected?.emoji || '📄'}</span>
+        <span className="note-picker-trigger-text">
+          {selected?.prefix && <span className="note-picker-prefix">{selected.prefix}</span>}
           {selected?.label}
         </span>
-        {selected && <span className="note-scope-count">{selected.count}</span>}
-        <span className={`note-scope-caret${open ? ' note-scope-caret--open' : ''}`} aria-hidden="true">
+        {selected?.count != null && <span className="note-picker-count">{selected.count}</span>}
+        <span className={`note-picker-caret${open ? ' note-picker-caret--open' : ''}`} aria-hidden="true">
           <svg width="11" height="7" viewBox="0 0 12 8" fill="none">
             <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -109,11 +116,11 @@ export default function NoteScopePicker({ options, value, onChange }) {
 
       {open && (
         <div
-          className="note-scope-menu"
-          id="note-scope-list"
+          className="note-picker-menu"
+          id={listId}
           role="listbox"
           ref={listRef}
-          aria-label="Show"
+          aria-label={label}
         >
           {options.map((option, i) => {
             // One heading per run of options sharing a group, so the
@@ -123,28 +130,28 @@ export default function NoteScopePicker({ options, value, onChange }) {
             const isSelected = option.value === value
             return (
               <div key={option.value}>
-                {startsGroup && <div className="note-scope-group">{option.group}</div>}
+                {startsGroup && <div className="note-picker-group">{option.group}</div>}
                 <div
-                  id={`note-scope-opt-${i}`}
+                  id={`${listId}-opt-${i}`}
                   data-index={i}
                   role="option"
                   aria-selected={isSelected}
                   tabIndex={-1}
                   className={[
-                    'note-scope-opt',
-                    isSelected ? 'note-scope-opt--selected' : '',
-                    i === activeIndex ? 'note-scope-opt--active' : '',
+                    'note-picker-opt',
+                    isSelected ? 'note-picker-opt--selected' : '',
+                    i === activeIndex ? 'note-picker-opt--active' : '',
                   ].filter(Boolean).join(' ')}
                   onClick={() => pick(option.value)}
                   onMouseEnter={() => setActiveIndex(i)}
                 >
-                  <span className="note-scope-opt-emoji">{option.emoji}</span>
-                  <span className="note-scope-opt-text">
-                    {option.prefix && <span className="note-scope-prefix">{option.prefix}</span>}
+                  <span className="note-picker-opt-emoji">{option.emoji}</span>
+                  <span className="note-picker-opt-text">
+                    {option.prefix && <span className="note-picker-prefix">{option.prefix}</span>}
                     {option.label}
                   </span>
-                  <span className="note-scope-count">{option.count}</span>
-                  <span className="note-scope-tick" aria-hidden="true">
+                  {option.count != null && <span className="note-picker-count">{option.count}</span>}
+                  <span className="note-picker-tick" aria-hidden="true">
                     {isSelected && (
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                         <path d="M1.5 6.2l3 3 6-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>

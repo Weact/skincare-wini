@@ -1,13 +1,24 @@
 import { useState, useRef, useEffect } from 'react'
+import NoteTreePicker from './NoteTreePicker'
 
 // Shared add/edit note form. Typing only — no drawing surface, by design.
-// Where a new note lands is decided by which section's "+" opened this
-// form, so there is deliberately no project/category picker here: moving a
-// note is drag-and-drop's job, and duplicating it as a dropdown would give
-// two controls that can disagree about the same thing.
-export default function NoteForm({ initial = null, heading, onSubmit, onCancel }) {
+//
+// The In field is the non-dragging way to file a note: which section's "+"
+// opened the form only seeds it, and changing it here moves the note just
+// like dropping it somewhere would. Dragging is the quick gesture; this is
+// the one that works on a phone, across a collapsed section, or when the
+// destination is somewhere off-screen.
+export default function NoteForm({
+  initial = null,
+  heading,
+  locationOptions = [],
+  defaultLocation = 'root',
+  onSubmit,
+  onCancel,
+}) {
   const [title, setTitle] = useState(initial?.title || '')
   const [content, setContent] = useState(initial?.content || '')
+  const [location, setLocation] = useState(defaultLocation)
   const titleRef = useRef(null)
 
   useEffect(() => { titleRef.current?.focus() }, [])
@@ -20,7 +31,7 @@ export default function NoteForm({ initial = null, heading, onSubmit, onCancel }
     // line of the body names it rather than the note being rejected.
     const finalTitle = trimmed || body.split('\n')[0].slice(0, 80)
     if (!finalTitle) return
-    onSubmit({ title: finalTitle, content: body })
+    onSubmit({ title: finalTitle, content: body, location })
   }
 
   return (
@@ -44,6 +55,18 @@ export default function NoteForm({ initial = null, heading, onSubmit, onCancel }
         placeholder="Write your note…"
         rows={6}
       />
+
+      {locationOptions.length > 1 && (
+        <div className="note-form-field">
+          <label className="field-label">In</label>
+          <NoteTreePicker
+            options={locationOptions}
+            value={location}
+            onChange={setLocation}
+            label="Where this note goes"
+          />
+        </div>
+      )}
 
       <div className="note-form-actions">
         <button

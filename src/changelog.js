@@ -10,6 +10,8 @@ export const CHANGELOG = [
       'New Notes tracker — plain typed notes, enable it from Settings → Trackers',
       'Organise notes three levels deep: a project holds categories, a category holds notes, and a note can sit directly in a project or in nothing at all',
       'Projects, categories and the Unfiled section are all allowed to be empty — nothing has to be filed anywhere',
+      'Every note has an In field: open a note, tap Edit, and pick the project, category or Unfiled it should live in — no dragging needed. The same field is on the add form, so a new note can be filed somewhere other than the section you started from',
+      'Editing a category lets you pick which project it belongs to, or take it out of one entirely — every note inside comes along',
       'Drag any note into any project, any category, or straight out to Unfiled, and reorder it wherever it lands',
       'Drag a whole category into a project or back out to the top level — every note inside it comes along',
       'Drag projects to reorder the sections themselves',

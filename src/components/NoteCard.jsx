@@ -10,6 +10,8 @@ export default function NoteCard({
   expanded,
   onToggleExpand,
   editing = false,
+  locationOptions = [],
+  currentLocation = "root",
   onStartEdit,
   onSubmitEdit,
   onCancelEdit,
@@ -33,6 +35,8 @@ export default function NoteCard({
         <NoteForm
           initial={note}
           heading="Editing note"
+          locationOptions={locationOptions}
+          defaultLocation={currentLocation}
           onSubmit={values => onSubmitEdit?.(note.id, values)}
           onCancel={onCancelEdit}
         />

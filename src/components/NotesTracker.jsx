@@ -19,7 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import NoteCard from './NoteCard'
 import NoteForm from './NoteForm'
-import NoteScopePicker from './NoteScopePicker'
+import NoteTreePicker from './NoteTreePicker'
 import EmojiPicker from './EmojiPicker'
 import SelectionBar from './SelectionBar'
 import DeleteConfirmModal from './DeleteConfirmModal'
@@ -163,12 +163,15 @@ function SectionHeader({
   onAddCategory,      // projects only
   addingNote,
   addingCategory,
+  locationOptions,    // categories only — which project this one sits in
+  currentLocation,
   dragHandleProps,
   readOnly,
 }) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editEmoji, setEditEmoji] = useState('')
+  const [editLocation, setEditLocation] = useState('root')
   const [showEmoji, setShowEmoji] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -194,13 +197,14 @@ function SectionHeader({
   function startEdit() {
     setEditName(item.name)
     setEditEmoji(item.emoji || '')
+    setEditLocation(currentLocation || 'root')
     setEditing(true)
     setShowMenu(false)
   }
 
   function saveEdit() {
     if (!editName.trim()) return
-    onRename(item.id, { name: editName.trim(), emoji: editEmoji })
+    onRename(item.id, { name: editName.trim(), emoji: editEmoji, location: editLocation })
     setEditing(false)
     setShowEmoji(false)
   }
@@ -220,23 +224,46 @@ function SectionHeader({
 
   if (editing) {
     return (
-      <div className={`note-section-header note-section-header--${kind}`}>
-        <div className="cat-edit-form" ref={emojiRef}>
-          <button type="button" className="cat-emoji-btn" onClick={() => setShowEmoji(s => !s)}>
-            {editEmoji || fallbackEmoji}
-          </button>
-          {showEmoji && (
-            <EmojiPicker value={editEmoji} onSelect={e => { setEditEmoji(e); setShowEmoji(false) }} />
+      <div className={`note-section-header note-section-header--${kind} note-section-header--editing`}>
+        <div className="note-edit-form">
+          <div className="note-edit-row" ref={emojiRef}>
+            <div className="cat-emoji-wrap">
+              <button type="button" className="cat-emoji-btn" onClick={() => setShowEmoji(s => !s)}>
+                {editEmoji || fallbackEmoji}
+              </button>
+              {showEmoji && (
+                <EmojiPicker value={editEmoji} onSelect={e => { setEditEmoji(e); setShowEmoji(false) }} />
+              )}
+            </div>
+            <input
+              className="cat-name-input"
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false) }}
+              autoFocus
+            />
+          </div>
+
+          {/* Only categories have somewhere to be moved to — a project is
+              already the outermost tier, so it has no parent to pick */}
+          {locationOptions?.length > 1 && (
+            <div className="note-form-field">
+              <label className="field-label">In</label>
+              <NoteTreePicker
+                options={locationOptions}
+                value={editLocation}
+                onChange={setEditLocation}
+                label="Which project this category sits in"
+              />
+            </div>
           )}
-          <input
-            className="cat-name-input"
-            value={editName}
-            onChange={e => setEditName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false) }}
-            autoFocus
-          />
-          <button type="button" className="cat-save-btn" onClick={saveEdit}>Save</button>
-          <button type="button" className="cat-cancel-btn" onClick={() => setEditing(false)}>✕</button>
+
+          <div className="note-edit-actions">
+            <button type="button" className="cat-save-btn" onClick={saveEdit}>Save</button>
+            <button type="button" className="cat-cancel-btn cat-cancel-btn--text" onClick={() => setEditing(false)}>
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -545,6 +572,39 @@ export default function NotesTracker({
     })),
   ]
 
+  // ── Filing by hand ────────────────────────────────────────────────
+  // The same tree, offered as destinations rather than as views. No counts:
+  // where a note is going has nothing to do with how full that place is.
+  const noteLocationOptions = [
+    { value: 'root', emoji: '📄', label: 'Unfiled' },
+    ...scopeOptions
+      .filter(o => o.group)
+      .map(({ count, ...rest }) => rest),
+  ]
+
+  // A category can only ever sit in a project or at the top level
+  const categoryLocationOptions = [
+    { value: 'root', emoji: '🗂️', label: 'No project' },
+    ...displayProjects.map(p => ({
+      value: `p:${p.id}`,
+      emoji: p.emoji || '📂',
+      label: p.name,
+      group: 'Projects',
+    })),
+  ]
+
+  const locationKeyOfNote = n =>
+    n.categoryId ? `c:${n.categoryId}` : n.projectId ? `p:${n.projectId}` : 'root'
+
+  // A note dropped into a category stores `projectId: null` — the category
+  // is what says which project it's in (see resolveNote), so a location key
+  // never sets both.
+  function noteFieldsFromKey(key) {
+    if (key.startsWith('c:')) return { categoryId: key.slice(2), projectId: null }
+    if (key.startsWith('p:')) return { categoryId: null, projectId: key.slice(2) }
+    return { categoryId: null, projectId: null }
+  }
+
   // ── Selection ─────────────────────────────────────────────────────
   function toggleExpanded(id) {
     setExpandedIds(prev => {
@@ -628,13 +688,35 @@ export default function NotesTracker({
   }
 
   async function handleAddNote(values) {
-    await addNote({ ...values, projectId: adding.projectId, categoryId: adding.categoryId })
+    const { location, ...fields } = values
+    await addNote({ ...fields, ...noteFieldsFromKey(location) })
     setAdding(null)
     onAdded?.()
   }
 
+  // Editing can move a note as well as change its text. A move can't just
+  // write the new ids: `order` is only meaningful inside one container, so
+  // the note would land on top of whatever already holds that number. It
+  // goes to the end of the destination instead, renumbering it in the same
+  // batch that saves the edit. The container it left keeps its gaps —
+  // ordering is relative, so a hole in the numbering changes nothing.
   async function handleEditNote(id, values) {
-    await updateNote(id, values)
+    const { location, ...fields } = values
+    const current = displayNotes.find(n => n.id === id)
+    const target = noteFieldsFromKey(location)
+    const moved = current && (
+      (current.categoryId || null) !== target.categoryId ||
+      (current.projectId || null) !== target.projectId
+    )
+    if (moved) {
+      const destination = [
+        ...notesIn(target.categoryId, target.projectId).filter(n => n.id !== id),
+        { ...current, ...target },
+      ]
+      await moveNote(id, { ...fields, ...target, updatedAt: new Date().toISOString() }, destination)
+    } else {
+      await updateNote(id, fields)
+    }
     setEditingId(null)
   }
 
@@ -646,6 +728,31 @@ export default function NotesTracker({
   async function handleAddCategory(name, emoji) {
     await addNoteCategory(name, emoji, addingCat.projectId)
     setAddingCat(null)
+  }
+
+  // Renaming a category can also re-home it. Same reasoning as a note's
+  // move: the destination project is renumbered so the category lands at
+  // the end rather than colliding with a sibling's `order`. Every note
+  // inside comes along untouched — they point at the category, not at the
+  // project (see resolveNote).
+  async function handleSaveCategory(id, { name, emoji, location }) {
+    const current = displayCats.find(c => c.id === id)
+    const toProject = location?.startsWith('p:') ? location.slice(2) : null
+    if (current && (current.projectId || null) !== toProject) {
+      const destination = [
+        ...catsIn(toProject).filter(c => c.id !== id),
+        { ...current, projectId: toProject },
+      ]
+      await moveNoteCategory(id, { name, emoji, projectId: toProject }, destination)
+    } else {
+      await updateNoteCategory(id, { name, emoji })
+    }
+  }
+
+  // Projects are the outermost tier — there is nowhere to move one to, so
+  // `location` never arrives here
+  async function handleSaveProject(id, { name, emoji }) {
+    await updateNoteProject(id, { name, emoji })
   }
 
   async function handleAddProject(name, emoji) {
@@ -893,6 +1000,8 @@ export default function NotesTracker({
       selected: selectedIds.has(note.id),
       onToggleSelect: toggleSelected,
       readOnly,
+      locationOptions: noteLocationOptions,
+      currentLocation: locationKeyOfNote(note),
     }
     // An open editor must not also be draggable — the handle would fight
     // the textarea for the same pointer.
@@ -911,6 +1020,14 @@ export default function NotesTracker({
           <NoteForm
             key={addKey}
             heading={`New note in ${adding.context}`}
+            locationOptions={noteLocationOptions}
+            // The section whose "+" was tapped only seeds the field — it can
+            // still be pointed somewhere else before the note is created
+            defaultLocation={
+              adding.categoryId ? `c:${adding.categoryId}`
+                : adding.projectId ? `p:${adding.projectId}`
+                : 'root'
+            }
             onSubmit={handleAddNote}
             onCancel={() => setAdding(null)}
           />
@@ -940,10 +1057,12 @@ export default function NotesTracker({
               count={items.length}
               collapsed={collapsed}
               onToggleCollapse={() => toggleCollapsed(cat.id)}
-              onRename={updateNoteCategory}
+              onRename={handleSaveCategory}
               onDelete={handleDeleteCategory}
               onAddNote={() => { expandSection(cat.id); openAdd(addKey, null, cat.id, cat.name) }}
               addingNote={adding?.key === addKey}
+              locationOptions={categoryLocationOptions}
+              currentLocation={cat.projectId ? `p:${cat.projectId}` : 'root'}
               dragHandleProps={canDrag ? handle : null}
               readOnly={readOnly || selectMode}
             />
@@ -973,7 +1092,7 @@ export default function NotesTracker({
               count={projectNoteCount(project.id)}
               collapsed={collapsed}
               onToggleCollapse={() => toggleCollapsed(project.id)}
-              onRename={updateNoteProject}
+              onRename={handleSaveProject}
               onDelete={handleDeleteProject}
               onAddNote={() => { expandSection(project.id); openAdd(addKey, project.id, null, project.name) }}
               onAddCategory={() => { expandSection(project.id); openAddCategory(project.id) }}
@@ -1100,7 +1219,7 @@ export default function NotesTracker({
           is the one control that has to stay usable at fifty of them. */}
       {showScopePicker && !isEmpty && (
         <div className="note-scope-bar">
-          <NoteScopePicker
+          <NoteTreePicker
             options={scopeOptions}
             value={scope === 'all' ? 'all' : scopeKey}
             onChange={setScopeKey}
