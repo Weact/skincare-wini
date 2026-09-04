@@ -10,7 +10,7 @@ export const CHANGELOG = [
       'New Expiring button at the top of the skincare tracker — every open or sealed product with less than 12 months left on its date, plus sealed products already past theirs, soonest first and cutting across all your categories. Tap one to jump straight to its card',
       'Set a "Send warning" date on any product: from that day the card counts down the days left, sealed or open. The reminder notification itself lands in a later update',
       'Sealed products now show how much of their printed date is left, in a second chip beside the Sealed badge — no more guessing which sealed jar to open first',
-      'Long horizons read as months or years instead of a four-digit day count: "3y left" rather than "1094d left". Anything inside two months still counts in days',
+      'Long horizons read as months or years instead of a four-digit day count: "3yrs left" rather than "1094d left". The last month still counts in days, then it is months up to a year and years beyond that',
       'Dates can now be typed straight in as DD/MM/YYYY, on top of the presets and the calendar picker — the slashes fill themselves in as you type',
       'Say how many of a product you have: a quantity with − and + buttons on the card, or type the number straight in. Anything above one shows at the end of the name, so six sunscreens read as one card rather than six',
       'The "Use within" period now takes any number of months from 1 to 24, on a slider under the dropdown. The common periods are still one tap away in the dropdown itself',

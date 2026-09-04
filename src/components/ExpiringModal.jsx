@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { formatDisplayDate, getDaysUntil, getProductStatus } from '../utils/dateUtils'
+import { formatDisplayDate, formatTimeLeft, getDaysUntil, getProductStatus } from '../utils/dateUtils'
 
 // The list behind the Expiring button — see getExpiringSoon for what gets in.
 // Deliberately flat and sorted by date alone, cutting across every category:
@@ -68,9 +68,7 @@ export default function ExpiringModal({ products, categories, types, onSelect, o
                           <span className={`badge badge--${tone}`}>
                             {days < 0
                               ? `Expired ${-days}d ago`
-                              : days === 0
-                                ? 'Expires today'
-                                : `${days}d left`}
+                              : formatTimeLeft(days)}
                           </span>
                         </span>
                       </button>

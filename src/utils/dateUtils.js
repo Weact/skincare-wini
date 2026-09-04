@@ -60,13 +60,15 @@ export function getDaysUntil(dateStr) {
 
 // Coarse remaining time, for anything far enough out that an exact day count
 // is noise — a sealed bottle reading "1094d left" tells you much less than
-// "3y left" does.
+// "3yrs left" does. Exact days through the last month, months up to a year,
+// years beyond that.
 export function formatTimeLeft(days) {
   if (days === null || days < 0) return null
   if (days === 0) return 'Expires today'
-  if (days < 60) return `${days}d left`
-  if (days < 550) return `${Math.round(days / 30)}mo left`
-  return `${Math.round(days / 365)}y left`
+  if (days <= 30) return `${days}d left`
+  if (days < 365) return `${Math.round(days / 30)}mo left`
+  const years = Math.round(days / 365)
+  return `${years}yr${years === 1 ? '' : 's'} left`
 }
 
 // Has the product's own "Send warning" date been reached? From that day on
