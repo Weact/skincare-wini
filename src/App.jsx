@@ -30,6 +30,7 @@ import WorkoutTracker from './components/WorkoutTracker'
 import PoopTracker from './components/PoopTracker'
 import PositionsTracker from './components/PositionsTracker'
 import TasksTracker from './components/TasksTracker'
+import NotesTracker from './components/NotesTracker'
 import Toast from './components/Toast'
 import EmojiPicker from './components/EmojiPicker'
 import SelectionBar from './components/SelectionBar'
@@ -46,6 +47,9 @@ import { usePositions } from './hooks/usePositions'
 import { useTasks } from './hooks/useTasks'
 import { useTaskCategories } from './hooks/useTaskCategories'
 import { useTaskLabels } from './hooks/useTaskLabels'
+import { useNotes } from './hooks/useNotes'
+import { useNoteCategories } from './hooks/useNoteCategories'
+import { useNoteProjects } from './hooks/useNoteProjects'
 import { useProfile } from './hooks/useProfile'
 import { useFriends } from './hooks/useFriends'
 import WelcomeScreen from './components/WelcomeScreen'
@@ -178,6 +182,12 @@ export default function App() {
   const { tasks, addTask, updateTask, toggleTaskDone, deleteTask, deleteTasks, reorderTasks } = useTasks(user?.uid)
   const { taskCategories, addTaskCategory } = useTaskCategories(user?.uid)
   const { taskLabels, addTaskLabel, updateTaskLabel, deleteTaskLabel } = useTaskLabels(user?.uid)
+  const { notes, addNote, updateNote, deleteNote, deleteNotes, reorderNotes, moveNote, reassignNotes } = useNotes(user?.uid)
+  const {
+    noteCategories, addNoteCategory, updateNoteCategory, deleteNoteCategory,
+    reorderNoteCategories, moveNoteCategory, reassignNoteCategories,
+  } = useNoteCategories(user?.uid)
+  const { noteProjects, addNoteProject, updateNoteProject, deleteNoteProject, reorderNoteProjects } = useNoteProjects(user?.uid)
   const { profile, setVisibility, setTrackerVisibilityMode, setTrackerVisibility, setAllTrackerVisibility } = useProfile(user?.uid, user?.isAnonymous)
   const { friends, incoming, outgoing, sendRequest, acceptRequest, declineRequest, cancelRequest, removeFriend, setFriendAlias } = useFriends(user?.uid, profile?.profileCode)
   const [showFriends, setShowFriends] = useState(false)
@@ -753,7 +763,7 @@ export default function App() {
                 </svg>
                 {changelogIsNew && <span className="changelog-dot" />}
               </button>
-              {mode && mode !== 'poop' && mode !== 'positions' && mode !== 'tasks' && !viewingFriend && !showFriends && (
+              {mode && mode !== 'poop' && mode !== 'positions' && mode !== 'tasks' && mode !== 'notes' && !viewingFriend && !showFriends && (
                 <button
                   className="calendar-btn"
                   onClick={() => setShowCalendar(true)}
@@ -792,6 +802,8 @@ export default function App() {
               ? `${workouts.length} ${workouts.length === 1 ? 'workout' : 'workouts'}`
               : mode === 'tasks'
               ? `${tasks.filter(t => !t.done).length} open`
+              : mode === 'notes'
+              ? `${notes.length} ${notes.length === 1 ? 'note' : 'notes'}`
               : mode === 'poop'
               ? `${poops.length} logged`
               : mode === 'positions'
@@ -841,6 +853,30 @@ export default function App() {
             updateTaskLabel={updateTaskLabel}
             deleteTaskLabel={deleteTaskLabel}
             onAdded={() => showToast('Task added ✅')}
+          />
+        ) : mode === 'notes' ? (
+          <NotesTracker
+            notes={notes}
+            noteCategories={noteCategories}
+            noteProjects={noteProjects}
+            addNote={addNote}
+            updateNote={updateNote}
+            deleteNote={deleteNote}
+            deleteNotes={deleteNotes}
+            reorderNotes={reorderNotes}
+            moveNote={moveNote}
+            reassignNotes={reassignNotes}
+            addNoteCategory={addNoteCategory}
+            updateNoteCategory={updateNoteCategory}
+            deleteNoteCategory={deleteNoteCategory}
+            reorderNoteCategories={reorderNoteCategories}
+            moveNoteCategory={moveNoteCategory}
+            reassignNoteCategories={reassignNoteCategories}
+            addNoteProject={addNoteProject}
+            updateNoteProject={updateNoteProject}
+            deleteNoteProject={deleteNoteProject}
+            reorderNoteProjects={reorderNoteProjects}
+            onAdded={() => showToast('Note saved 📝')}
           />
         ) : mode === 'poop' ? (
           <PoopTracker poops={poops} addPoop={addPoop} deletePoop={deletePoop} reorderPoops={reorderPoops} />

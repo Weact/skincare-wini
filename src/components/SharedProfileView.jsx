@@ -8,9 +8,13 @@ import { useSteps } from '../hooks/useSteps'
 import { useTasks } from '../hooks/useTasks'
 import { useTaskCategories } from '../hooks/useTaskCategories'
 import { useTaskLabels } from '../hooks/useTaskLabels'
+import { useNotes } from '../hooks/useNotes'
+import { useNoteCategories } from '../hooks/useNoteCategories'
+import { useNoteProjects } from '../hooks/useNoteProjects'
 import WorkoutTracker from './WorkoutTracker'
 import PoopTracker from './PoopTracker'
 import TasksTracker from './TasksTracker'
+import NotesTracker from './NotesTracker'
 import SharedSkincareView from './SharedSkincareView'
 
 const noop = () => {}
@@ -31,6 +35,9 @@ export default function SharedProfileView({ uid, label, onExit }) {
   const { tasks } = useTasks(uid)
   const { taskCategories } = useTaskCategories(uid)
   const { taskLabels } = useTaskLabels(uid)
+  const { notes } = useNotes(uid)
+  const { noteCategories } = useNoteCategories(uid)
+  const { noteProjects } = useNoteProjects(uid)
 
   useEffect(() => {
     if (!uid) return
@@ -82,6 +89,32 @@ export default function SharedProfileView({ uid, label, onExit }) {
             addTaskLabel={noop}
             updateTaskLabel={noop}
             deleteTaskLabel={noop}
+            readOnly
+          />
+        )
+      case 'notes':
+        return (
+          <NotesTracker
+            notes={notes}
+            noteCategories={noteCategories}
+            noteProjects={noteProjects}
+            addNote={noop}
+            updateNote={noop}
+            deleteNote={noop}
+            deleteNotes={noop}
+            reorderNotes={noop}
+            moveNote={noop}
+            reassignNotes={noop}
+            addNoteCategory={noop}
+            updateNoteCategory={noop}
+            deleteNoteCategory={noop}
+            reorderNoteCategories={noop}
+            moveNoteCategory={noop}
+            reassignNoteCategories={noop}
+            addNoteProject={noop}
+            updateNoteProject={noop}
+            deleteNoteProject={noop}
+            reorderNoteProjects={noop}
             readOnly
           />
         )

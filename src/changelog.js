@@ -3,6 +3,29 @@
 // list stays readable when several shipped in the same month.
 export const CHANGELOG = [
   {
+    version: '2.6',
+    title: 'Notes tracker',
+    date: 'Sep 2026',
+    entries: [
+      'New Notes tracker — plain typed notes, enable it from Settings → Trackers',
+      'Organise notes three levels deep: a project holds categories, a category holds notes, and a note can sit directly in a project or in nothing at all',
+      'Projects, categories and the Unfiled section are all allowed to be empty — nothing has to be filed anywhere',
+      'Drag any note into any project, any category, or straight out to Unfiled, and reorder it wherever it lands',
+      'Drag a whole category into a project or back out to the top level — every note inside it comes along',
+      'Drag projects to reorder the sections themselves',
+      'Deleting a project or a category never deletes what is inside it: the notes move up one level instead, so nothing is lost by tidying up',
+      'Add a note, a category or a project from wherever you already are — every section header has its own labelled buttons',
+      'Rename or re-emoji any project or category from its ··· menu, same as skincare categories',
+      'Tap a note to read it in full, with Edit and Delete underneath; collapsed it shows one line of the body',
+      'A view picker at the top of the tracker narrows it to one project (its categories and notes), one category (just its notes), or the Unfiled notes on their own — with a count next to every option and a Show all button to come back',
+      'The picker is a proper menu rather than a plain dropdown: every option carries its own emoji, its note count, and the project it sits in, grouped under Projects and Categories headings, and it works from the keyboard with the arrow keys',
+      'While a project or category is showing on its own, Add note puts the note straight into it rather than into Unfiled, and says so on the button',
+      'The chosen view is remembered between visits, and falls back to showing everything if what it pointed at is deleted',
+      'Select mode on the Notes tracker — pick notes across every project and bulk-delete them, with each one showing where it lives before you confirm',
+      'Notes joins the friend-sharing system with its own visibility toggle in Settings → Privacy',
+    ],
+  },
+  {
     version: '2.5',
     title: 'Expiry warnings & duplicates',
     date: 'Sep 2026',

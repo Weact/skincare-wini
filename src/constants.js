@@ -36,6 +36,7 @@ export const TRACKERS = [
   { key: 'skincare', label: 'Skincare', icon: '🧴',  defaultEnabled: true },
   { key: 'workout',  label: 'Workouts', icon: '🏋️', defaultEnabled: true },
   { key: 'tasks',    label: 'Tasks',    icon: '✅',  defaultEnabled: true },
+  { key: 'notes',    label: 'Notes',    icon: '📝',  defaultEnabled: true },
   { key: 'poop',     label: 'Poop',     icon: '💩',  defaultEnabled: false },
 ]
 

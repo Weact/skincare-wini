@@ -65,6 +65,22 @@ service cloud.firestore {
       allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'tasks');
     }
 
+    // Notes and their two container collections travel together for the same
+    // reason tasks' do — a shared note list can't render its project and
+    // category sections without those docs, so all three share the 'notes'
+    // visibility flag.
+    match /users/{userId}/notes/{noteId} {
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'notes');
+    }
+
+    match /users/{userId}/noteCategories/{categoryId} {
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'notes');
+    }
+
+    match /users/{userId}/noteProjects/{projectId} {
+      allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'notes');
+    }
+
     match /users/{userId}/categories/{categoryId} {
       allow read: if isSignedInNonAnonymous() && isFriend(userId) && trackerVisible(userId, 'skincare');
     }
