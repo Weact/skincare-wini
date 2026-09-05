@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useId } from 'react'
 import NoteTreePicker from './NoteTreePicker'
 
 // Shared add/edit note form. Typing only — no drawing surface, by design.
@@ -20,6 +20,7 @@ export default function NoteForm({
   const [content, setContent] = useState(initial?.content || '')
   const [location, setLocation] = useState(defaultLocation)
   const titleRef = useRef(null)
+  const titleId = useId()
 
   useEffect(() => { titleRef.current?.focus() }, [])
 
@@ -38,15 +39,39 @@ export default function NoteForm({
     <form className="note-form" onSubmit={handleSubmit}>
       {heading && <div className="note-form-heading">{heading}</div>}
 
-      <input
-        ref={titleRef}
-        type="text"
-        className="note-form-title"
-        value={title}
-        onChange={e => setTitle(e.target.value)}
-        placeholder="Note title"
-        maxLength={140}
-      />
+      {/* What it's called and where it goes are both one-line facts about
+          the note, so they share a row — and the body, the thing you
+          actually came here to write, stays unbroken underneath. The row
+          folds to two lines on its own once there isn't width for both. */}
+      <div className="note-form-head">
+        <div className="note-form-field note-form-field--grow">
+          <label className="field-label" htmlFor={titleId}>Title</label>
+          <input
+            ref={titleRef}
+            id={titleId}
+            type="text"
+            className="note-form-title"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Note title"
+            maxLength={140}
+          />
+        </div>
+
+        {locationOptions.length > 1 && (
+          <div className="note-form-field note-form-field--side">
+            {/* A span, not a label: the picker is a listbox rather than a
+                form control, so it carries its own accessible name */}
+            <span className="field-label">In</span>
+            <NoteTreePicker
+              options={locationOptions}
+              value={location}
+              onChange={setLocation}
+              label="Where this note goes"
+            />
+          </div>
+        )}
+      </div>
 
       <textarea
         className="note-form-content"
@@ -55,18 +80,6 @@ export default function NoteForm({
         placeholder="Write your note…"
         rows={6}
       />
-
-      {locationOptions.length > 1 && (
-        <div className="note-form-field">
-          <label className="field-label">In</label>
-          <NoteTreePicker
-            options={locationOptions}
-            value={location}
-            onChange={setLocation}
-            label="Where this note goes"
-          />
-        </div>
-      )}
 
       <div className="note-form-actions">
         <button

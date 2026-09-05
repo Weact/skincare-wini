@@ -22,13 +22,16 @@ export function useNoteProjects(userId) {
     return unsub
   }, [userId])
 
-  async function addNoteProject(name, emoji) {
+  async function addNoteProject(name, emoji, color) {
     const id = generateId()
     const order = noteProjects.length
       ? Math.max(...noteProjects.map(p => p.order ?? 0)) + 1
       : 0
     await setDoc(doc(db, 'users', userId, 'noteProjects', id), {
-      id, name, emoji: emoji || '', order, createdAt: new Date().toISOString(),
+      // `color` is a key from NOTE_COLORS, empty for "default" — the actual
+      // values live in App.css so both themes stay in one place
+      id, name, emoji: emoji || '', color: color || '', order,
+      createdAt: new Date().toISOString(),
     })
     return id
   }

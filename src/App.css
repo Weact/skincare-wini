@@ -5725,13 +5725,28 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   border-bottom: none;
 }
 
-/* A label above its picker — used for "In" in both the note form and a
-   category's edit form */
+/* A label above its control — used for Title/Name and for "In" in both the
+   note form and a category's edit form */
 .note-form-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
+
+/* Title and destination on one row. The flex-basis minimums are what make
+   this responsive without a media query: they sit side by side while both
+   can have their minimum, and wrap the moment they can't — which is the
+   right answer on a phone and inside a category nested two levels deep,
+   where a fixed 80/20 split would squeeze the picker down to an ellipsis. */
+.note-form-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.note-form-field--grow { flex: 3 1 220px; }
+.note-form-field--side { flex: 1 1 176px; }
 
 /* ── Renaming / re-homing a project or category ── */
 /* Editing takes over the whole header row: with a picker in it this no
@@ -5754,10 +5769,19 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   gap: 8px;
 }
 
+/* .cat-name-input is borderless because in the skincare tracker it sits
+   inside a bordered edit form. Here it's a bare field on the form's own
+   ground, so it has to draw its own box to match the note form's title. */
 .note-edit-row .cat-name-input {
   flex: 1;
   min-width: 0;
+  padding: 0 11px;
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-xs);
 }
+
+.note-edit-row .cat-name-input:focus { border-color: var(--primary); }
 
 .note-edit-actions {
   display: flex;
@@ -5767,14 +5791,93 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 
 /* The picker inside a form sits on the form's own ground, so it needs the
    lighter surface to stay legible against it */
+/* Matches the 38px of the title input and the emoji button beside it, so
+   the two columns line up along both edges */
 .note-form-field .note-picker-trigger,
 .note-edit-form .note-picker-trigger {
-  height: 40px;
+  height: 38px;
   font-size: var(--fz-base);
   background: var(--surface);
+  border-width: 1px;
+  border-color: var(--border-input);
+  border-radius: var(--radius-xs);
+}
+
+/* Restated at the same specificity as the rule above, which would otherwise
+   out-rank the plain .note-picker-trigger--open and leave the picker with no
+   open state at all inside a form */
+.note-form-field .note-picker-trigger--open,
+.note-edit-form .note-picker-trigger--open,
+.note-form-field .note-picker-trigger:focus-visible,
+.note-edit-form .note-picker-trigger:focus-visible {
+  border-color: var(--primary);
 }
 
 .note-form-field .note-picker-trigger-text,
 .note-edit-form .note-picker-trigger-text {
   font-size: var(--fz-base);
 }
+
+/* ── Section colours ── */
+/* Each key only defines the two custom properties; the rules below decide
+   what a header does with them, so light and dark stay in one place (the
+   --lbl-* pairs, shared with the task tracker's labels).
+
+   The tint class sits on the header band, never on the container. Custom
+   properties inherit, so tinting the container would hand every category
+   inside a coloured project its parent's colour instead of its own. */
+.note-tint--gray   { --note-tint-bg: var(--lbl-gray-bg);   --note-tint-fg: var(--lbl-gray-fg); }
+.note-tint--rose   { --note-tint-bg: var(--lbl-rose-bg);   --note-tint-fg: var(--lbl-rose-fg); }
+.note-tint--amber  { --note-tint-bg: var(--lbl-amber-bg);  --note-tint-fg: var(--lbl-amber-fg); }
+.note-tint--sage   { --note-tint-bg: var(--lbl-sage-bg);   --note-tint-fg: var(--lbl-sage-fg); }
+.note-tint--teal   { --note-tint-bg: var(--lbl-teal-bg);   --note-tint-fg: var(--lbl-teal-fg); }
+.note-tint--sky    { --note-tint-bg: var(--lbl-sky-bg);    --note-tint-fg: var(--lbl-sky-fg); }
+.note-tint--violet { --note-tint-bg: var(--lbl-violet-bg); --note-tint-fg: var(--lbl-violet-fg); }
+.note-tint--plum   { --note-tint-bg: var(--lbl-plum-bg);   --note-tint-fg: var(--lbl-plum-fg); }
+
+/* Restated here rather than edited in place above so the whole colour
+   feature reads as one block; the fallback is each tier's untinted look */
+.note-section-header--project  { background: var(--note-tint-bg, var(--primary-light)); }
+.note-section-header--category { background: var(--note-tint-bg, var(--surface)); }
+
+/* The name and the count take the palette's foreground, which is the dark
+   end of the same hue — that's what keeps the pair legible in both themes
+   without a per-colour contrast decision. */
+.note-tint .note-section-name  { color: var(--note-tint-fg); }
+.note-tint .note-section-count {
+  color: var(--note-tint-fg);
+  background: var(--surface);
+}
+
+/* The handle and chevron are the tint's own colour held back, so they read
+   as controls on a coloured band instead of competing with the name */
+.note-tint .cat-drag-handle,
+.note-tint .note-section-main .chevron {
+  color: var(--note-tint-fg);
+  opacity: 0.55;
+}
+
+/* "Default" is the absence of a colour, so it shows the surface rather than
+   a ninth hue. It borders itself rather than using an inset shadow, which
+   would collide with the box-shadow .task-swatch--active draws. */
+.task-swatch--default {
+  background: var(--surface);
+  border-color: var(--border-input);
+}
+
+/* The colour row in the new-project / new-category form. The row above it
+   already ends in Add and ✕, so this sits under the whole thing. */
+.note-container-color {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* The thing under the cursor wears its colour too, so what you picked up is
+   recognisable at a glance while it is out of its place in the list */
+.cat-overlay-card.note-tint {
+  background: var(--note-tint-bg);
+  border-color: transparent;
+}
+
+.cat-overlay-card.note-tint .cat-name { color: var(--note-tint-fg); }

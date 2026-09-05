@@ -207,3 +207,12 @@ export const TASK_LABEL_COLORS = [
 ]
 
 export const DEFAULT_LABEL_COLOR = 'gray'
+
+// Section colours for the Notes tracker. The same palette task labels use —
+// one set of --lbl-* variables serves both, so a colour added there shows up
+// here — plus a "Default" entry whose key is the empty string, which stores
+// no colour at all and leaves a section with the theme's own header tint.
+export const NOTE_COLORS = [
+  { key: '', label: 'Default' },
+  ...TASK_LABEL_COLORS,
+]

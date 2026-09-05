@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import {
   DndContext,
   pointerWithin,
@@ -23,6 +23,7 @@ import NoteTreePicker from './NoteTreePicker'
 import EmojiPicker from './EmojiPicker'
 import SelectionBar from './SelectionBar'
 import DeleteConfirmModal from './DeleteConfirmModal'
+import { NOTE_COLORS } from '../constants'
 
 // Drag ids are prefixed by tier so one handler can tell what was picked up
 // and what it was dropped on, across three nesting levels plus the root.
@@ -148,6 +149,41 @@ function SortableContainer({ id, className, children }) {
   )
 }
 
+// ── Colour ──────────────────────────────────────────────────────────
+// A project or category can carry a colour, which tints its header band.
+// Only the header is tinted, never the container: a category nested in a
+// project has to be able to show its own colour against its parent's.
+function tintClass(color) {
+  return color ? ` note-tint note-tint--${color}` : ''
+}
+
+// Reuses the task tracker's swatch styling and palette rather than
+// inventing a second set — same control, same muscle memory.
+function ColorRow({ value, onChange }) {
+  return (
+    <div className="task-swatch-row" role="group" aria-label="Colour">
+      {NOTE_COLORS.map(c => {
+        const active = (value || '') === c.key
+        return (
+          <button
+            key={c.key || 'default'}
+            type="button"
+            className={[
+              'task-swatch',
+              `task-swatch--${c.key || 'default'}`,
+              active ? 'task-swatch--active' : '',
+            ].filter(Boolean).join(' ')}
+            onClick={() => onChange(c.key)}
+            aria-label={c.label}
+            aria-pressed={active}
+            title={c.label}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Section header ──────────────────────────────────────────────────
 // Rename / delete state is local to each header (the same shape as the
 // skincare CategorySection) so one open menu can't leak into another.
@@ -171,6 +207,7 @@ function SectionHeader({
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editEmoji, setEditEmoji] = useState('')
+  const [editColor, setEditColor] = useState('')
   const [editLocation, setEditLocation] = useState('root')
   const [showEmoji, setShowEmoji] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -178,6 +215,7 @@ function SectionHeader({
   const confirmTimer = useRef(null)
   const menuRef = useRef(null)
   const emojiRef = useRef(null)
+  const nameId = useId()
 
   useEffect(() => {
     function handle(e) {
@@ -197,6 +235,7 @@ function SectionHeader({
   function startEdit() {
     setEditName(item.name)
     setEditEmoji(item.emoji || '')
+    setEditColor(item.color || '')
     setEditLocation(currentLocation || 'root')
     setEditing(true)
     setShowMenu(false)
@@ -204,7 +243,9 @@ function SectionHeader({
 
   function saveEdit() {
     if (!editName.trim()) return
-    onRename(item.id, { name: editName.trim(), emoji: editEmoji, location: editLocation })
+    onRename(item.id, {
+      name: editName.trim(), emoji: editEmoji, color: editColor, location: editLocation,
+    })
     setEditing(false)
     setShowEmoji(false)
   }
@@ -224,39 +265,54 @@ function SectionHeader({
 
   if (editing) {
     return (
-      <div className={`note-section-header note-section-header--${kind} note-section-header--editing`}>
+      // The band behind the form takes the colour being picked, so the
+      // swatch row previews the result instead of describing it
+      <div className={`note-section-header note-section-header--${kind} note-section-header--editing${tintClass(editColor)}`}>
         <div className="note-edit-form">
-          <div className="note-edit-row" ref={emojiRef}>
-            <div className="cat-emoji-wrap">
-              <button type="button" className="cat-emoji-btn" onClick={() => setShowEmoji(s => !s)}>
-                {editEmoji || fallbackEmoji}
-              </button>
-              {showEmoji && (
-                <EmojiPicker value={editEmoji} onSelect={e => { setEditEmoji(e); setShowEmoji(false) }} />
-              )}
+          {/* Name and parent sit on one row for the same reason they do on a
+              note, and wrap to two when the section is too narrow for both */}
+          <div className="note-form-head">
+            <div className="note-form-field note-form-field--grow">
+              <label className="field-label" htmlFor={nameId}>Name</label>
+              <div className="note-edit-row" ref={emojiRef}>
+                <div className="cat-emoji-wrap">
+                  <button type="button" className="cat-emoji-btn" onClick={() => setShowEmoji(s => !s)}>
+                    {editEmoji || fallbackEmoji}
+                  </button>
+                  {showEmoji && (
+                    <EmojiPicker value={editEmoji} onSelect={e => { setEditEmoji(e); setShowEmoji(false) }} />
+                  )}
+                </div>
+                <input
+                  id={nameId}
+                  className="cat-name-input"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false) }}
+                  autoFocus
+                />
+              </div>
             </div>
-            <input
-              className="cat-name-input"
-              value={editName}
-              onChange={e => setEditName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false) }}
-              autoFocus
-            />
+
+            {/* Only categories have somewhere to be moved to — a project is
+                already the outermost tier, so it has no parent to pick */}
+            {locationOptions?.length > 1 && (
+              <div className="note-form-field note-form-field--side">
+                <span className="field-label">In</span>
+                <NoteTreePicker
+                  options={locationOptions}
+                  value={editLocation}
+                  onChange={setEditLocation}
+                  label="Which project this category sits in"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Only categories have somewhere to be moved to — a project is
-              already the outermost tier, so it has no parent to pick */}
-          {locationOptions?.length > 1 && (
-            <div className="note-form-field">
-              <label className="field-label">In</label>
-              <NoteTreePicker
-                options={locationOptions}
-                value={editLocation}
-                onChange={setEditLocation}
-                label="Which project this category sits in"
-              />
-            </div>
-          )}
+          <div className="note-form-field">
+            <span className="field-label">Colour</span>
+            <ColorRow value={editColor} onChange={setEditColor} />
+          </div>
 
           <div className="note-edit-actions">
             <button type="button" className="cat-save-btn" onClick={saveEdit}>Save</button>
@@ -270,7 +326,7 @@ function SectionHeader({
   }
 
   return (
-    <div className={`note-section-header note-section-header--${kind}`}>
+    <div className={`note-section-header note-section-header--${kind}${tintClass(item.color)}`}>
       {dragHandleProps && !readOnly && (
         <span className="cat-drag-handle" {...dragHandleProps}>
           <svg width="12" height="16" viewBox="0 0 12 16" fill="none">
@@ -340,6 +396,7 @@ function SectionHeader({
 function ContainerForm({ heading, placeholder, fallbackEmoji, onSave, onCancel }) {
   const [name, setName] = useState('')
   const [emoji, setEmoji] = useState('')
+  const [color, setColor] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
   const emojiRef = useRef(null)
   const inputRef = useRef(null)
@@ -361,7 +418,7 @@ function ContainerForm({ heading, placeholder, fallbackEmoji, onSave, onCancel }
   function save() {
     const trimmed = name.trim()
     if (!trimmed) return
-    onSave(trimmed, emoji)
+    onSave(trimmed, emoji, color)
   }
 
   return (
@@ -388,6 +445,13 @@ function ContainerForm({ heading, placeholder, fallbackEmoji, onSave, onCancel }
         />
         <button type="button" className="cat-save-btn" onClick={save} disabled={!name.trim()}>Add</button>
         <button type="button" className="cat-cancel-btn" onClick={onCancel}>✕</button>
+      </div>
+
+      {/* Below the name rather than in the row: the row already ends in two
+          buttons, and a colour is a choice you make once and rarely revisit */}
+      <div className="note-container-color">
+        <span className="field-label">Colour</span>
+        <ColorRow value={color} onChange={setColor} />
       </div>
     </div>
   )
@@ -725,8 +789,8 @@ export default function NotesTracker({
     setAddingCat(prev => (prev && prev.projectId === projectId ? null : { projectId }))
   }
 
-  async function handleAddCategory(name, emoji) {
-    await addNoteCategory(name, emoji, addingCat.projectId)
+  async function handleAddCategory(name, emoji, color) {
+    await addNoteCategory(name, emoji, addingCat.projectId, color)
     setAddingCat(null)
   }
 
@@ -735,7 +799,7 @@ export default function NotesTracker({
   // the end rather than colliding with a sibling's `order`. Every note
   // inside comes along untouched — they point at the category, not at the
   // project (see resolveNote).
-  async function handleSaveCategory(id, { name, emoji, location }) {
+  async function handleSaveCategory(id, { name, emoji, color, location }) {
     const current = displayCats.find(c => c.id === id)
     const toProject = location?.startsWith('p:') ? location.slice(2) : null
     if (current && (current.projectId || null) !== toProject) {
@@ -743,20 +807,20 @@ export default function NotesTracker({
         ...catsIn(toProject).filter(c => c.id !== id),
         { ...current, projectId: toProject },
       ]
-      await moveNoteCategory(id, { name, emoji, projectId: toProject }, destination)
+      await moveNoteCategory(id, { name, emoji, color: color || '', projectId: toProject }, destination)
     } else {
-      await updateNoteCategory(id, { name, emoji })
+      await updateNoteCategory(id, { name, emoji, color: color || '' })
     }
   }
 
   // Projects are the outermost tier — there is nowhere to move one to, so
   // `location` never arrives here
-  async function handleSaveProject(id, { name, emoji }) {
-    await updateNoteProject(id, { name, emoji })
+  async function handleSaveProject(id, { name, emoji, color }) {
+    await updateNoteProject(id, { name, emoji, color: color || '' })
   }
 
-  async function handleAddProject(name, emoji) {
-    await addNoteProject(name, emoji)
+  async function handleAddProject(name, emoji, color) {
+    await addNoteProject(name, emoji, color)
     setAddingProject(false)
   }
 
@@ -1343,7 +1407,7 @@ export default function NotesTracker({
             {activeId?.startsWith('ncat-') && (() => {
               const c = noteCategories.find(c => c.id === activeId.slice(5))
               return c ? (
-                <div className="dnd-overlay cat-overlay-card">
+                <div className={`dnd-overlay cat-overlay-card${tintClass(c.color)}`}>
                   <span className="cat-emoji">{c.emoji || '🗂️'}</span>
                   <span className="cat-name">{c.name}</span>
                 </div>
@@ -1352,7 +1416,7 @@ export default function NotesTracker({
             {activeId?.startsWith('nproj-') && (() => {
               const p = noteProjects.find(p => p.id === activeId.slice(6))
               return p ? (
-                <div className="dnd-overlay cat-overlay-card">
+                <div className={`dnd-overlay cat-overlay-card${tintClass(p.color)}`}>
                   <span className="cat-emoji">{p.emoji || '📂'}</span>
                   <span className="cat-name">{p.name}</span>
                 </div>

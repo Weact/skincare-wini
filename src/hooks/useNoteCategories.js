@@ -27,7 +27,7 @@ export function useNoteCategories(userId) {
     return unsub
   }, [userId])
 
-  async function addNoteCategory(name, emoji, projectId = null) {
+  async function addNoteCategory(name, emoji, projectId = null, color = '') {
     const id = generateId()
     const siblings = noteCategories.filter(c => (c.projectId || null) === (projectId || null))
     const order = siblings.length ? Math.max(...siblings.map(c => c.order ?? 0)) + 1 : 0
@@ -35,6 +35,8 @@ export function useNoteCategories(userId) {
       id,
       name,
       emoji: emoji || '',
+      // A key from NOTE_COLORS, empty for "default" (see useNoteProjects)
+      color: color || '',
       projectId: projectId || null,
       order,
       createdAt: new Date().toISOString(),
