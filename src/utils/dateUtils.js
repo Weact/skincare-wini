@@ -44,6 +44,14 @@ export function addMonths(dateStr, months) {
   return d.toISOString().split('T')[0]
 }
 
+// Shift an ISO day by whole days. toISODate rather than toISOString: the
+// latter re-reads the date in UTC and lands a day early east of it.
+export function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + days)
+  return toISODate(d)
+}
+
 export function formatDisplayDate(dateStr) {
   if (!dateStr) return null
   const [year, month, day] = dateStr.split('-')

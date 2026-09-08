@@ -13,12 +13,14 @@ export default function TaskRow({
   onToggleDone,
   onEdit,
   onDelete,
+  onPostpone,
   selectMode = false,
   selected = false,
   onToggleSelect,
   readOnly = false,
   overdue = false,
   dateLabel = null,
+  timeLabel = null,
   tone = null,
   lateLabel = null,
   editing = false,
@@ -82,9 +84,15 @@ export default function TaskRow({
 
         <button type="button" className="task-row-body" onClick={handleRowClick}>
           <span className="task-title">{task.title}</span>
-          {dateLabel && (
-            <span className={`task-date task-date--${tone}`}>
+          {/* The time rides in the date's slot rather than getting one of its
+              own — it's the same answer to "when", and an undated task with a
+              time still has something to say there. */}
+          {(dateLabel || timeLabel) && (
+            <span className={`task-date task-date--${tone || 'none'}`}>
               {dateLabel}
+              {timeLabel && (
+                <span className="task-time">{dateLabel ? ' · ' : ''}{timeLabel}</span>
+              )}
               {lateLabel && <span className="task-date-late"> · {lateLabel}</span>}
             </span>
           )}
@@ -109,6 +117,25 @@ export default function TaskRow({
           )}
           {task.notes && !expanded && <span className="task-note-dot" aria-label="Has notes">•••</span>}
         </button>
+
+        {/* Pushing a task to tomorrow is the one edit common enough to be
+            worth a tap on the card itself rather than a trip through the
+            form. It rides in the row's top-right corner, next to the rest
+            of the actions in time but not in place — it's a one-tap change,
+            not something you confirm. Dated, open tasks only: there's no
+            day to add one to in Undated, and a ticked-off task has left
+            its date bucket for good. */}
+        {expanded && !selectMode && !readOnly && task.date && !task.done && (
+          <button
+            type="button"
+            className="task-postpone-btn"
+            onClick={e => { e.stopPropagation(); onPostpone?.(task.id) }}
+            title="Push this task one day later"
+            aria-label={`Push "${task.title}" one day later`}
+          >
+            +1d
+          </button>
+        )}
       </div>
 
       {expanded && !selectMode && (

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { TASK_LABEL_COLORS, DEFAULT_LABEL_COLOR } from '../constants'
+import { TASK_LABEL_COLORS, DEFAULT_LABEL_COLOR, HOURS, MINUTES } from '../constants'
 import DateInput from './DateInput'
 import EmojiPicker from './EmojiPicker'
 
@@ -26,6 +26,11 @@ export default function TaskForm({
 }) {
   const [title, setTitle] = useState(initial?.title || '')
   const [date, setDate] = useState(initial ? (initial.date || '') : (defaultDate || ''))
+  // Stored as one 'HH:mm' string (or null), same as events and workouts; the
+  // two selects just read the halves off it, so there is no way to end up
+  // holding an hour without a minute.
+  const [time, setTime] = useState(initial?.time || '')
+  const [timeHour, timeMinute] = time ? time.split(':') : ['', '']
   const [categoryId, setCategoryId] = useState(initial?.categoryId || '')
   const [labelIds, setLabelIds] = useState(initial?.labelIds || [])
   const [notes, setNotes] = useState(initial?.notes || '')
@@ -55,6 +60,19 @@ export default function TaskForm({
       document.removeEventListener('touchstart', handle)
     }
   }, [])
+
+  // Either half clearing sets the whole time back to null — a task at
+  // "09:--" isn't a time, and leaving a half-set value around would be
+  // stored as one.
+  function handleHourChange(e) {
+    const h = e.target.value
+    setTime(h ? `${h}:${timeMinute || '00'}` : '')
+  }
+
+  function handleMinuteChange(e) {
+    const m = e.target.value
+    setTime(m ? `${timeHour || '00'}:${m}` : '')
+  }
 
   function toggleLabel(id) {
     setLabelIds(list => list.includes(id) ? list.filter(x => x !== id) : [...list, id])
@@ -113,6 +131,7 @@ export default function TaskForm({
     onSubmit({
       title: trimmed,
       date: date || null,
+      time: time || null,
       categoryId: categoryId || null,
       labelIds,
       notes: notes.trim(),
@@ -147,6 +166,38 @@ export default function TaskForm({
         </div>
         <div className="field-hint">
           Tasks with no date collect in the Undated section at the bottom.
+        </div>
+      </div>
+
+      {/* Same two-select shape as the calendar's event form, so an "HH:mm"
+          means the same thing and is entered the same way everywhere in the
+          app. Clearing either half back to "--" removes the time entirely. */}
+      <div className="task-form-row">
+        <label className="field-label">Time</label>
+        <div className="cal-time-select-row task-form-time">
+          <select
+            className="field-input field-select"
+            value={timeHour}
+            onChange={handleHourChange}
+            aria-label="Hour"
+          >
+            <option value="">--</option>
+            {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+          </select>
+          <span className="cal-time-colon">:</span>
+          <select
+            className="field-input field-select"
+            value={timeMinute}
+            onChange={handleMinuteChange}
+            aria-label="Minute"
+          >
+            <option value="">--</option>
+            {MINUTES.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div className="field-hint">
+          Optional. A task with a time shows it on its row; leave it on “--” for no
+          particular time.
         </div>
       </div>
 

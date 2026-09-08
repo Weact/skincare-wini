@@ -26,6 +26,8 @@ export const CHANGELOG = [
       'The chosen view is remembered between visits, and falls back to showing everything if what it pointed at is deleted',
       'Select mode on the Notes tracker — pick notes across every project and bulk-delete them, with each one showing where it lives before you confirm',
       'Notes joins the friend-sharing system with its own visibility toggle in Settings → Privacy',
+      'Tasks: open a dated task and a "+1d" button appears in its top-right corner — one tap pushes it to the next day, and the row re-dates and re-sorts straight away',
+      'Tasks can now carry a time of day as well as a date — pick an hour and a minute on the add or edit form, and the row shows it next to the date. Leave both on "--" for a task with no particular time',
     ],
   },
   {

@@ -18,7 +18,9 @@ import {
   formatDayHeading,
   formatOverdue,
   formatTaskDate,
+  formatEventTime,
   dateTone,
+  addDays,
 } from '../utils/dateUtils'
 import TaskRow from './TaskRow'
 import TaskForm from './TaskForm'
@@ -323,6 +325,16 @@ export default function TasksTracker({
       sublabel: t.date ? formatDayHeading(t.date) : 'Undated',
     }))
 
+  // The row's own "+1d". updateTask re-slots it at the end of the day it
+  // lands in, exactly as an edited date would — the only difference is that
+  // it takes one tap and the row re-sorts (and may change pane) as soon as
+  // Firestore echoes the write back.
+  function postponeTask(id) {
+    const task = tasks.find(t => t.id === id)
+    if (!task?.date) return
+    updateTask(id, { date: addDays(task.date, 1) })
+  }
+
   async function handleAdd(values) {
     await addTask(values)
     setAdding(null)
@@ -382,6 +394,7 @@ export default function TasksTracker({
       onToggleDone: toggleTaskDone,
       onEdit: t => { setAdding(null); setEditingId(t.id) },
       onDelete: deleteTask,
+      onPostpone: postponeTask,
       selectMode,
       selected: selectedIds.has(task.id),
       onToggleSelect: toggleSelected,
@@ -391,6 +404,7 @@ export default function TasksTracker({
       // late an overdue task already is rides along with it — that used to
       // be the day heading's job.
       dateLabel: task.date ? formatTaskDate(task.date) : null,
+      timeLabel: formatEventTime(task.time),
       tone,
       lateLabel: overdue ? formatOverdue(task.date) : null,
       // The form sits at the top of the tracker, so the row it belongs to

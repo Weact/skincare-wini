@@ -7,7 +7,9 @@ function generateId() {
 }
 
 // One doc per task. `date` is an ISO day or null (null = the Undated
-// section); `categoryId` is at most one, `labelIds` is any number. `order`
+// section); `time` is "HH:mm" or null (null = no time of day), the same
+// shape events, workouts and poops already store; `categoryId` is at most
+// one, `labelIds` is any number. `order`
 // is only ever compared between tasks sharing the same date bucket (same
 // idea as poops' per-day order and products' per-category order), so
 // different days reuse the same numbers by design — the sections themselves
@@ -33,6 +35,7 @@ export function useTasks(userId) {
       title: task.title,
       notes: task.notes || '',
       date: task.date || null,
+      time: task.time || null,
       categoryId: task.categoryId || null,
       labelIds: task.labelIds || [],
       done: false,

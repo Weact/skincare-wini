@@ -4567,6 +4567,15 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 .task-date--today  { color: var(--text); }
 .task-date--future { color: var(--blue-text); }
 .task-date--past   { color: var(--red-text); }
+/* An undated task with a time has no urgency to report — only a time */
+.task-date--none   { color: var(--text-muted); }
+
+/* The time sits in the date's line and inherits its tone, so an overdue
+   task's time is as red as its date. Tabular figures keep a column of
+   times from jittering as the digits change. */
+.task-time {
+  font-variant-numeric: tabular-nums;
+}
 
 .task-date-late { font-weight: 700; }
 
@@ -4615,6 +4624,28 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   letter-spacing: 1px;
   color: var(--text-light);
 }
+
+
+/* One-tap "push to tomorrow", pinned to the card's top-right while the row
+   is open. Deliberately quieter than the check box next to it: the label
+   spells out what it does, so it doesn't need weight to be found. */
+.task-postpone-btn {
+  flex-shrink: 0;
+  margin-top: 1px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: var(--fz-xs);
+  font-weight: 700;
+  line-height: 16px;
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.task-postpone-btn:hover { border-color: var(--primary); }
 
 .task-row-detail {
   padding: 0 8px 9px 40px;
@@ -4802,6 +4833,12 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   border-radius: var(--radius-xs);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Two selects that only ever hold "HH" and "mm" have no use for the full
+   form width the way the date field does */
+.task-form-time {
+  max-width: 190px;
 }
 
 .task-form-notes {
