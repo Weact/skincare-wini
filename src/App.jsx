@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   DndContext,
+  closestCenter,
   pointerWithin,
   rectIntersection,
   MouseSensor,
@@ -13,6 +14,7 @@ import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
+  horizontalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -61,20 +63,72 @@ import { LATEST_VERSION } from './changelog'
 import { TRACKERS } from './constants'
 import './App.css'
 
-// Which trackers the user has opted into — device-local, defaults to each
-// tracker's own `defaultEnabled` flag (so existing Skincare/Workout users
-// see no change, while opt-in trackers like Poop start off). Read directly
-// from localStorage (rather than through `settings`) so the very first
-// `mode` computation below doesn't have to wait on that state existing yet.
+// Which trackers the user has opted into, in the left-to-right order they
+// want them — device-local, defaults to each tracker's own `defaultEnabled`
+// flag in catalogue order (so existing Skincare/Workout users see no
+// change, while opt-in trackers like Poop start off). Read directly from
+// localStorage (rather than through `settings`) so the very first `mode`
+// computation below doesn't have to wait on that state existing yet.
+//
+// This array is now the bar's order as well as its membership, so it gets
+// cleaned on the way in: a key no longer in TRACKERS (a tracker dropped in
+// a later version) would render nothing, and a duplicate would hand two
+// tabs the same drag id and break sorting outright.
 function getStoredEnabledTrackers() {
   try {
     const raw = localStorage.getItem('enabledTrackers')
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed
+      if (Array.isArray(parsed)) {
+        const known = new Set(TRACKERS.map(t => t.key))
+        return [...new Set(parsed.filter(k => known.has(k)))]
+      }
     }
   } catch {}
   return TRACKERS.filter(t => t.defaultEnabled).map(t => t.key)
+}
+
+// Fast lookup from a stored tracker key back to its definition. The bar is
+// driven by the user's own key order now, so it reads from this rather than
+// walking TRACKERS in catalogue order.
+const TRACKER_BY_KEY = new Map(TRACKERS.map(t => [t.key, t]))
+
+// One tracker tab in the header switch, draggable to reorder the bar. The
+// whole pill is the drag surface — there is no room for a separate handle
+// at this size, and the shared sensors' 8px / 200ms thresholds are what
+// keep an ordinary tap a plain tab switch and a horizontal swipe a scroll
+// of the bar. dnd-kit's own `role`/`tabIndex`/pressed attributes are
+// dropped so the button stays a genuine tab to a screen reader; its
+// "sortable" role description and instructions are kept.
+function SortableModeButton({ tracker, active, onSelect }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: tracker.key })
+  const {
+    role: _role,
+    tabIndex: _tabIndex,
+    'aria-pressed': _pressed,
+    'aria-disabled': _disabled,
+    ...dragA11y
+  } = attributes
+  return (
+    <button
+      ref={setNodeRef}
+      role="tab"
+      aria-selected={active}
+      className={`mode-switch-btn${active ? ' mode-switch-btn--active' : ''}`}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+      onClick={() => onSelect(tracker.key)}
+      {...dragA11y}
+      {...listeners}
+    >
+      <span className="mode-switch-icon">{tracker.icon}</span>
+      <span className="mode-switch-label">{tracker.label}</span>
+    </button>
+  )
 }
 
 function generateId() {
@@ -421,6 +475,21 @@ export default function App() {
     setSettings(s => ({ ...s, [key]: value }))
   }
 
+  // The tracker bar's own reorder. `enabledTrackers` doubles as the bar's
+  // order, so a drop is just an arrayMove of that one array — and because
+  // it's the same array `mode` falls back to, the user's leftmost tracker
+  // becomes the one the app lands on, which is the answer you'd want.
+  // Device-local like the rest of `settings`: nothing here reaches
+  // Firestore, so an order is per-device rather than per-account.
+  function handleTrackerDragEnd({ active, over }) {
+    if (!over || active.id === over.id) return
+    const order = settings.enabledTrackers
+    const from = order.indexOf(active.id)
+    const to = order.indexOf(over.id)
+    if (from === -1 || to === -1) return
+    updateSetting('enabledTrackers', arrayMove(order, from, to))
+  }
+
   // Close emoji picker on outside click
   useEffect(() => {
     function handle(e) {
@@ -708,6 +777,14 @@ export default function App() {
   const categoryIds = displayCategories.map(c => `cat-${c.id}`)
   const uncategorized = grouped.__none || []
 
+  // The header bar, in the user's own order. Mapping the stored keys (rather
+  // than filtering TRACKERS) is what makes the order theirs; getStored...
+  // already drops unknown keys, and the filter here covers a key going stale
+  // within a session.
+  const orderedTrackers = settings.enabledTrackers
+    .map(k => TRACKER_BY_KEY.get(k))
+    .filter(Boolean)
+
   const selectedProductItems = products
     .filter(p => selectedProductIds.has(p.id))
     .map(p => ({
@@ -722,31 +799,43 @@ export default function App() {
         <div className="app-header-top">
           <div className="app-header-left">
             {mode && !viewingFriend && (
-              <div className="mode-switch" role="tablist" aria-label="Tracker">
-                {TRACKERS.filter(t => settings.enabledTrackers.includes(t.key)).map(t => (
-                  <button
-                    key={t.key}
-                    role="tab"
-                    aria-selected={mode === t.key}
-                    className={`mode-switch-btn${mode === t.key ? ' mode-switch-btn--active' : ''}`}
-                    onClick={() => switchMode(t.key)}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleTrackerDragEnd}
+              >
+                <div className="mode-switch" role="tablist" aria-label="Tracker">
+                  <SortableContext
+                    items={orderedTrackers.map(t => t.key)}
+                    strategy={horizontalListSortingStrategy}
                   >
-                    <span className="mode-switch-icon">{t.icon}</span>
-                    <span className="mode-switch-label">{t.label}</span>
-                  </button>
-                ))}
-                {settings.positionsEnabled && (
-                  <button
-                    role="tab"
-                    aria-selected={mode === 'positions'}
-                    className={`mode-switch-btn${mode === 'positions' ? ' mode-switch-btn--active' : ''}`}
-                    onClick={() => switchMode('positions')}
-                  >
-                    <span className="mode-switch-icon">🔥</span>
-                    <span className="mode-switch-label">Positions</span>
-                  </button>
-                )}
-              </div>
+                    {orderedTrackers.map(t => (
+                      <SortableModeButton
+                        key={t.key}
+                        tracker={t}
+                        active={mode === t.key}
+                        onSelect={switchMode}
+                      />
+                    ))}
+                  </SortableContext>
+                  {/* Positions is pinned to the end rather than joining the
+                      sortable run: it is deliberately kept out of TRACKERS
+                      and out of enabledTrackers (see constants.js), and
+                      enabledTrackers is exactly the array being reordered
+                      here, so it has no slot in that order to occupy. */}
+                  {settings.positionsEnabled && (
+                    <button
+                      role="tab"
+                      aria-selected={mode === 'positions'}
+                      className={`mode-switch-btn${mode === 'positions' ? ' mode-switch-btn--active' : ''}`}
+                      onClick={() => switchMode('positions')}
+                    >
+                      <span className="mode-switch-icon">🔥</span>
+                      <span className="mode-switch-label">Positions</span>
+                    </button>
+                  )}
+                </div>
+              </DndContext>
             )}
           </div>
           <div className="app-header-right">

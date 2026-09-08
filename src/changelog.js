@@ -27,6 +27,7 @@ export const CHANGELOG = [
       'Select mode on the Notes tracker — pick notes across every project and bulk-delete them, with each one showing where it lives before you confirm',
       'Notes joins the friend-sharing system with its own visibility toggle in Settings → Privacy',
       'Tasks: open a dated task and a "+1d" button appears in its top-right corner — one tap pushes it to the next day, and the row re-dates and re-sorts straight away',
+      'Drag the tracker tabs in the header to put them in whatever order you like — hold and drag on a touchscreen, or just drag with the mouse. The order is remembered on that device, and the leftmost tracker is the one the app opens on',
       'Tasks can now carry a time of day as well as a date — pick an hour and a minute on the add or edit form, and the row shows it next to the date. Leave both on "--" for a task with no particular time',
     ],
   },

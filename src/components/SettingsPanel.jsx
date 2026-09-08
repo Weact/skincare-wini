@@ -40,6 +40,10 @@ export default function SettingsPanel({
 
   const workoutEnabled = settings.enabledTrackers.includes('workout')
 
+  // This array is also the header bar's left-to-right order (see App.jsx),
+  // so switching a tracker back on appends it to the end rather than
+  // restoring it to its catalogue position — the user's own order wins, and
+  // the new tab lands somewhere predictable instead of appearing mid-row.
   function toggleTracker(key) {
     const next = settings.enabledTrackers.includes(key)
       ? settings.enabledTrackers.filter(k => k !== key)
@@ -81,7 +85,9 @@ export default function SettingsPanel({
           <div className="settings-section">
             <div className="settings-section-title settings-section-title--lg">Trackers</div>
             <div className="field-hint">
-              Unchecked trackers are hidden from the header entirely
+              Unchecked trackers are hidden from the header entirely. Drag the tabs
+              in the header to change the order they appear in — a tracker switched
+              back on joins the end of that order.
             </div>
             <div className="tracker-toggle-list">
               {TRACKERS.map(t => (
