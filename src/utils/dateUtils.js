@@ -38,10 +38,11 @@ export function formatEventTime(time) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
+// toISODate for the same reason as addDays below
 export function addMonths(dateStr, months) {
   const d = new Date(dateStr + 'T00:00:00')
   d.setMonth(d.getMonth() + months)
-  return d.toISOString().split('T')[0]
+  return toISODate(d)
 }
 
 // Shift an ISO day by whole days. toISODate rather than toISOString: the
@@ -83,48 +84,87 @@ export function formatTimeLeft(days) {
 // the card switches to an exact day count and an amber tone, whether or not
 // the product has been opened. (The notification itself is not built yet.)
 export function isWarningActive(product, today = todayISO()) {
-  if (!product.warningDate || !product.expirationDate) return false
+  if (!product.warningDate) return false
+  if (!product.expirationDate && !getUseWithinDate(product)) return false
   return today >= product.warningDate
+}
+
+// The last day to use an opened product: opening date + its "Use within"
+// period. Null until it's both opened and has a period.
+export function getUseWithinDate(product) {
+  if (!product.openingDate || !product.usageMonths) return null
+  return addMonths(product.openingDate, product.usageMonths)
 }
 
 // `label` is the badge; `note` is the smaller chip beside it, carrying the
 // time left when the badge itself doesn't already say it (a sealed product
 // stays "Sealed" — nothing has started running down — but its printed date
 // is still ticking, and that's what the note shows).
+//
+// Once opened, the countdown is the "Use within" date — that's the one that
+// actually runs out in practice. The printed expiration date only drives it
+// when no period is set. When the printed date would come first,
+// `expiresFirst` is set so the card can warn about it.
+//
+// Only the printed expiration date passing makes an opened product
+// 'expired' (and moves it to the Expired section). Running past the "Use
+// within" date alone is 'past-use': the card stays where it is, flagged —
+// see getPastDates for the warning either case shows.
 export function getProductStatus(product) {
   if (product.emptiedAt) {
     return { type: 'empty', label: 'Empty' }
   }
-  const days = getDaysUntil(product.expirationDate)
-  const warned = days !== null && days >= 0 && isWarningActive(product)
+  const useWithinDate = getUseWithinDate(product)
+  const expiryDays = getDaysUntil(product.expirationDate)
 
   if (!product.openingDate) {
-    if (days === null) {
+    const warned = expiryDays !== null && expiryDays >= 0 && isWarningActive(product)
+    if (expiryDays === null) {
       return { type: 'sealed', label: 'Sealed' }
     }
-    if (days < 0) {
+    if (expiryDays < 0) {
       return { type: 'sealed', label: 'Sealed', note: 'Past expiry', noteTone: 'expired' }
     }
     return {
       type: 'sealed',
       label: 'Sealed',
-      note: warned ? `${days}d left` : formatTimeLeft(days),
-      noteTone: warned || days <= 30 ? 'expiring' : 'muted',
+      note: warned ? `${expiryDays}d left` : formatTimeLeft(expiryDays),
+      noteTone: warned || expiryDays <= 30 ? 'expiring' : 'muted',
     }
   }
+
+  const days = useWithinDate ? getDaysUntil(useWithinDate) : expiryDays
   if (days === null) {
     return { type: 'open', label: 'Open' }
   }
-  if (days < 0) {
+  if (expiryDays !== null && expiryDays < 0) {
     return { type: 'expired', label: 'Expired' }
   }
+  if (days < 0) {
+    return { type: 'past-use', label: 'Past use within' }
+  }
+  const expiresFirst = !!useWithinDate && !!product.expirationDate && product.expirationDate < useWithinDate
+  const warned = isWarningActive(product)
   if (days === 0) {
-    return { type: 'expiring', label: 'Expires today' }
+    return { type: 'expiring', label: 'Expires today', expiresFirst }
   }
   if (days <= 30 || warned) {
-    return { type: 'expiring', label: `${days}d left` }
+    return { type: 'expiring', label: `${days}d left`, expiresFirst }
   }
-  return { type: 'open', label: formatTimeLeft(days) }
+  return { type: 'open', label: formatTimeLeft(days), expiresFirst }
+}
+
+// The dates a product has already run past, for the card's warning strip:
+// `expirationDate` and/or `useWithinDate`, each only when it's behind us.
+// Null when neither has — or when the product is used up, since an empty
+// bottle past its date is nothing to act on.
+export function getPastDates(product, today = todayISO()) {
+  if (product.emptiedAt) return null
+  const useWithinDate = getUseWithinDate(product)
+  const past = {}
+  if (product.expirationDate && product.expirationDate < today) past.expirationDate = product.expirationDate
+  if (useWithinDate && useWithinDate < today) past.useWithinDate = useWithinDate
+  return Object.keys(past).length ? past : null
 }
 
 // The products the Expiring button surfaces, soonest first. Two ways in:

@@ -74,6 +74,18 @@ export default function SharedSkincareView({ uid }) {
         {products.length} {products.length === 1 ? 'product' : 'products'}
       </span>
 
+      {/* Uncategorized first — same layout as the owner's own view */}
+      {uncategorized.length > 0 && (
+        <CategorySection
+          category={null}
+          products={uncategorized}
+          categories={categories}
+          expandedIds={expandedIds}
+          onToggleExpanded={toggleExpanded}
+          readOnly
+        />
+      )}
+
       {categories.map(cat => (
         <CategorySection
           key={cat.id}
@@ -86,17 +98,6 @@ export default function SharedSkincareView({ uid }) {
           readOnly
         />
       ))}
-
-      {uncategorized.length > 0 && (
-        <CategorySection
-          category={null}
-          products={uncategorized}
-          categories={categories}
-          expandedIds={expandedIds}
-          onToggleExpanded={toggleExpanded}
-          readOnly
-        />
-      )}
 
       {expiredProducts.length > 0 && (
         <ExpiredSection

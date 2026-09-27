@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
-import { addMonths, formatDisplayDate, formatEventTime, getProductStatus, todayISO } from '../utils/dateUtils'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import { addMonths, formatDisplayDate, formatEventTime, formatTimeLeft, getDaysUntil, getPastDates, getProductStatus, getUseWithinDate, todayISO } from '../utils/dateUtils'
 import { resizeImage } from '../utils/imageUtils'
 import { TIME_OF_DAY } from '../constants'
 import DateInput from './DateInput'
@@ -11,6 +12,51 @@ function clampQuantity(raw) {
   const n = parseInt(raw, 10)
   if (!n || n < 1) return 1
   return Math.min(n, 99)
+}
+
+// '12/03/2027 · 5mo left' — a date plus how far off it is, for the tooltip
+function describeDate(dateStr) {
+  const days = getDaysUntil(dateStr)
+  const when = days < 0 ? 'passed' : days === 0 ? 'today' : formatTimeLeft(days)
+  return `${formatDisplayDate(dateStr)} · ${when}`
+}
+
+// Hover card listing both dates behind the countdown badge. Portalled with
+// fixed positioning because .card clips its overflow; hidden on scroll since
+// it wouldn't follow the badge.
+function DatesTooltip({ anchor, product, expiresFirst, onClose }) {
+  useEffect(() => {
+    window.addEventListener('scroll', onClose, true)
+    return () => window.removeEventListener('scroll', onClose, true)
+  }, [onClose])
+
+  const useWithinDate = getUseWithinDate(product)
+  const months = product.usageMonths
+  const useWithin = useWithinDate
+    ? describeDate(useWithinDate)
+    : months ? `${months} month${months === 1 ? '' : 's'} once opened` : 'Not set'
+  const expires = product.expirationDate ? describeDate(product.expirationDate) : 'Not set'
+
+  return createPortal(
+    <div
+      className="dates-tooltip"
+      role="tooltip"
+      style={{ top: anchor.bottom + 6, right: window.innerWidth - anchor.right }}
+    >
+      <div className="dates-tooltip-row">
+        <span className="dates-tooltip-label">Use within</span>
+        <span>{useWithin}</span>
+      </div>
+      <div className="dates-tooltip-row">
+        <span className="dates-tooltip-label">Expires</span>
+        <span>{expires}</span>
+      </div>
+      {expiresFirst && (
+        <div className="dates-tooltip-warning">⚠ The expiration date comes before the end of the “use within” period</div>
+      )}
+    </div>,
+    document.body
+  )
 }
 
 const USAGE_OPTIONS = [
@@ -38,7 +84,6 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const confirmTimerRef = useRef(null)
   const photoInputRef = useRef(null)
   const typeEmojiRef = useRef(null)
-  const usageTimerRef = useRef(null)
   const qtyTimerRef = useRef(null)
 
   const typesForCategory = types.filter(t => t.categoryId === product.categoryId)
@@ -169,18 +214,24 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
 
   function handleUsageMonthsChange(e) {
     const val = e.target.value ? parseInt(e.target.value) : null
-    clearTimeout(usageTimerRef.current)
     setUsageValue(val)
     commitUsageMonths(val)
   }
 
   // The slider fires on every step of a drag. The readout and the dropdown
-  // follow immediately, but only the month you settle on gets written.
+  // follow immediately, but nothing is written until the drag is let go (or
+  // an arrow key released) — writing mid-drag could flip the card to Expired
+  // and whisk it off to that section while the thumb is still held.
   function handleUsageRangeChange(e) {
-    const val = parseInt(e.target.value)
-    setUsageValue(val)
-    clearTimeout(usageTimerRef.current)
-    usageTimerRef.current = setTimeout(() => commitUsageMonths(val), 300)
+    setUsageValue(parseInt(e.target.value))
+  }
+
+  function handleUsageRangeCommit(e) {
+    // Untouched while unset, the thumb just rests on 1 — tabbing through
+    // mustn't write that as a real period
+    if (usageValue == null) return
+    const val = parseInt(e.currentTarget.value)
+    if (val !== product.usageMonths) commitUsageMonths(val)
   }
 
   function handleWarningDateChange(e) {
@@ -233,6 +284,11 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
 
   const status = getProductStatus(product)
   const showBody = expanded && !selectMode
+  // Where the dates tooltip hangs from (the badges' rect), or null when hidden
+  const [tipAnchor, setTipAnchor] = useState(null)
+  const hideTip = useCallback(() => setTipAnchor(null), [])
+  const hasDates = !!(product.expirationDate || product.usageMonths)
+  const past = getPastDates(product)
 
   return (
     <div id={'product-' + product.id} className={`card card--${status.type}${selectMode && selected ? ' card--selected' : ''}`}>
@@ -297,9 +353,21 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
               </svg>
             </span>
           )}
-          <span className={`badge badge--${status.type}`}>{status.label}</span>
-          {status.note && (
-            <span className={`badge badge--note badge--note-${status.noteTone}`}>{status.note}</span>
+          <span
+            className="card-badges"
+            onMouseEnter={hasDates ? e => setTipAnchor(e.currentTarget.getBoundingClientRect()) : undefined}
+            onMouseLeave={hasDates ? hideTip : undefined}
+          >
+            {status.expiresFirst && (
+              <span className="badge badge--note badge--note-expiring">⚠ Expires sooner</span>
+            )}
+            <span className={`badge badge--${status.type}`}>{status.label}</span>
+            {status.note && (
+              <span className={`badge badge--note badge--note-${status.noteTone}`}>{status.note}</span>
+            )}
+          </span>
+          {tipAnchor && (
+            <DatesTooltip anchor={tipAnchor} product={product} expiresFirst={status.expiresFirst} onClose={hideTip} />
           )}
           {!selectMode && (
             <span className={`chevron ${expanded ? 'chevron--up' : ''}`}>
@@ -310,6 +378,26 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
           )}
         </div>
       </div>
+
+      {/* Stays up collapsed or open, in whatever section the card is in —
+          a date that's gone by is never left to the badge alone */}
+      {past && (
+        <div className="card-alert">
+          <svg className="card-alert-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3.5 2.5 20h19L12 3.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+            <path d="M12 10v4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="12" cy="17.3" r="1.2" fill="currentColor"/>
+          </svg>
+          <div className="card-alert-lines">
+            {past.useWithinDate && (
+              <span>Past its “use within” date ({formatDisplayDate(past.useWithinDate)})</span>
+            )}
+            {past.expirationDate && (
+              <span>Past its expiration date ({formatDisplayDate(past.expirationDate)})</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {showBody && readOnly && (
         <div className="card-body">
@@ -504,6 +592,7 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
             <label className="field-label">Product name</label>
             <input
               ref={nameRef}
+              data-product-name
               type="text"
               className="field-input"
               value={name}
@@ -586,6 +675,9 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
                 className="usage-range"
                 value={usageValue || 1}
                 onChange={handleUsageRangeChange}
+                onPointerUp={handleUsageRangeCommit}
+                onKeyUp={handleUsageRangeCommit}
+                onBlur={handleUsageRangeCommit}
                 aria-label="Use within, in months"
               />
               <span className="usage-slider-value">

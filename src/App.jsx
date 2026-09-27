@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -37,6 +37,7 @@ import Toast from './components/Toast'
 import EmojiPicker from './components/EmojiPicker'
 import SelectionBar from './components/SelectionBar'
 import DeleteConfirmModal from './components/DeleteConfirmModal'
+import ExpiredNotice from './components/ExpiredNotice'
 import { useAuth } from './hooks/useAuth'
 import { useProducts } from './hooks/useProducts'
 import { useCategories } from './hooks/useCategories'
@@ -58,7 +59,7 @@ import WelcomeScreen from './components/WelcomeScreen'
 import SharedProfileView from './components/SharedProfileView'
 import FriendsPanel from './components/FriendsPanel'
 import { resizeImage } from './utils/imageUtils'
-import { getExpiringSoon, getProductStatus } from './utils/dateUtils'
+import { formatDisplayDate, getExpiringSoon, getProductStatus } from './utils/dateUtils'
 import { LATEST_VERSION } from './changelog'
 import { TRACKERS } from './constants'
 import './App.css'
@@ -295,6 +296,28 @@ export default function App() {
     if (newProductId) setNewProductId(null)
   }, [newProductId])
 
+  // A just-added product whose name field should get the cursor. Waits for
+  // the card to render — the Firestore snapshot usually lands before
+  // addProduct() resolves, but not always.
+  const [focusProductId, setFocusProductId] = useState(null)
+
+  useEffect(() => {
+    if (!focusProductId) return
+    const nameInput = document.querySelector(`#product-${focusProductId} [data-product-name]`)
+    if (nameInput) {
+      // Only when it's already on screen — the page never scrolls for this
+      const { top, bottom } = nameInput.getBoundingClientRect()
+      if (top >= 0 && bottom <= window.innerHeight) nameInput.focus({ preventScroll: true })
+      setFocusProductId(null)
+      return
+    }
+    // Give up if it never shows, so a late render can't steal focus
+    const t = setTimeout(() => setFocusProductId(null), 3000)
+    return () => clearTimeout(t)
+    // newProductId: a collapsed Uncategorized reopens off its set→clear,
+    // which is when the card finally mounts
+  }, [focusProductId, products, newProductId])
+
   // Which product cards are expanded — lifted up here (rather than local
   // state inside ProductCard) because changing a product's category/type
   // moves it to a different parent list (a different CategorySection or
@@ -518,12 +541,20 @@ export default function App() {
 
   async function handleAddProduct(photo = null) {
     const id = generateId()
+    // First in Uncategorized, which renders at the top of the list, so the
+    // new card appears right under the toolbar. Negative is fine — the next
+    // reorder in this bucket renumbers everything from 0.
+    const orders = uncategorized.map(p => p.order).filter(Number.isFinite)
+    const order = orders.length ? Math.min(...orders) - 1 : 0
+    // Expand before the write — Firestore's local snapshot usually renders
+    // the card before addProduct() resolves
+    setExpandedIds(prev => new Set(prev).add(id))
+    setFocusProductId(id)
     await addProduct({
       id, name: '', quantity: 1, openingDate: null, expirationDate: null,
-      usageMonths: null, warningDate: null, photo, createdAt: new Date().toISOString(),
+      usageMonths: null, warningDate: null, photo, createdAt: new Date().toISOString(), order,
     })
     setNewProductId(id)
-    setExpandedIds(prev => new Set(prev).add(id))
     // New products always start uncategorized — there's no way yet to add
     // directly into a specific category from the FABs
     showToast('Added product to Uncategorized')
@@ -575,6 +606,29 @@ export default function App() {
     const affected = products.filter(p => p.typeId === typeId)
     await Promise.all(affected.map(p => updateProduct(p.id, { typeId: null })))
     await deleteType(typeId)
+  }
+
+  // Every edit from a product card comes through here, so an edit that tips
+  // a product into Expired — which moves its card out of its category — can
+  // tell the user where it went instead of the card just disappearing
+  const [expiredNotice, setExpiredNotice] = useState(null)
+  // Stable, since the notice's auto-hide timer depends on it
+  const closeExpiredNotice = useCallback(() => setExpiredNotice(null), [])
+
+  function handleUpdateProduct(id, updates) {
+    const product = products.find(p => p.id === id)
+    if (product && getProductStatus(product).type !== 'expired') {
+      const next = { ...product, ...updates }
+      if (getProductStatus(next).type === 'expired') {
+        // Only the printed date moves a card — past "use within" stays put
+        const reason = `passed its expiration date, ${formatDisplayDate(next.expirationDate)}`
+        // What the edited fields held before, for Undo
+        const previous = Object.fromEntries(Object.keys(updates).map(k => [k, product[k] ?? null]))
+        // key: a second product expiring replaces the notice and restarts its timer
+        setExpiredNotice({ key: Date.now(), id, name: next.name, reason, previous })
+      }
+    }
+    return updateProduct(id, updates)
   }
 
   async function handleDeleteProduct(productId) {
@@ -1140,7 +1194,7 @@ export default function App() {
                     <li key={product.id}>
                       <ProductCard
                         product={product}
-                        onUpdate={updates => updateProduct(product.id, updates)}
+                        onUpdate={updates => handleUpdateProduct(product.id, updates)}
                         onDelete={() => handleDeleteProduct(product.id)}
                         startExpanded={product.id === newProductId}
                         expanded={expandedIds.has(product.id)}
@@ -1166,6 +1220,29 @@ export default function App() {
                 onDragEnd={handleDragEnd}
                 onDragCancel={() => { setActiveId(null); setLiveProducts(null); setLiveCategoryOrder(null); setLiveTypeOrder(null) }}
               >
+                {/* Uncategorized — always at top, where new products land so
+                    they appear in view; not sortable at section level */}
+                {uncategorized.length > 0 && (
+                  <CategorySection
+                    category={null}
+                    products={uncategorized}
+                    categories={categories}
+                    onCreateType={handleCreateType}
+                    events={events}
+                    onOpenEvent={handleOpenEvent}
+                    onUpdateProduct={handleUpdateProduct}
+                    onDeleteProduct={handleDeleteProduct}
+                    onUpdateCategory={() => {}}
+                    onDeleteCategory={() => {}}
+                    newProductId={newProductId}
+                    expandedIds={expandedIds}
+                    onToggleExpanded={toggleExpanded}
+                    selectMode={selectMode}
+                    selectedIds={selectedProductIds}
+                    onToggleSelect={toggleProductSelect}
+                  />
+                )}
+
                 <SortableContext items={categoryIds} strategy={verticalListSortingStrategy}>
                   {displayCategories.map(cat => (
                     <SortableCategory
@@ -1177,7 +1254,7 @@ export default function App() {
                       onCreateType={handleCreateType}
                       events={events}
                       onOpenEvent={handleOpenEvent}
-                      onUpdateProduct={updateProduct}
+                      onUpdateProduct={handleUpdateProduct}
                       onDeleteProduct={handleDeleteProduct}
                       onUpdateCategory={updateCategory}
                       onDeleteCategory={handleDeleteCategory}
@@ -1192,28 +1269,6 @@ export default function App() {
                     />
                   ))}
                 </SortableContext>
-
-                {/* Uncategorized — always at bottom, not sortable at section level */}
-                {uncategorized.length > 0 && (
-                  <CategorySection
-                    category={null}
-                    products={uncategorized}
-                    categories={categories}
-                    onCreateType={handleCreateType}
-                    events={events}
-                    onOpenEvent={handleOpenEvent}
-                    onUpdateProduct={updateProduct}
-                    onDeleteProduct={handleDeleteProduct}
-                    onUpdateCategory={() => {}}
-                    onDeleteCategory={() => {}}
-                    newProductId={newProductId}
-                    expandedIds={expandedIds}
-                    onToggleExpanded={toggleExpanded}
-                    selectMode={selectMode}
-                    selectedIds={selectedProductIds}
-                    onToggleSelect={toggleProductSelect}
-                  />
-                )}
 
                 <DragOverlay>
                   {activeId?.startsWith('prod-') && (() => {
@@ -1263,7 +1318,7 @@ export default function App() {
                 onCreateType={handleCreateType}
                 events={events}
                 onOpenEvent={handleOpenEvent}
-                onUpdateProduct={updateProduct}
+                onUpdateProduct={handleUpdateProduct}
                 onDeleteProduct={handleDeleteProduct}
                 newProductId={newProductId}
                 expandedIds={expandedIds}
@@ -1284,7 +1339,7 @@ export default function App() {
                 onCreateType={handleCreateType}
                 events={events}
                 onOpenEvent={handleOpenEvent}
-                onUpdateProduct={updateProduct}
+                onUpdateProduct={handleUpdateProduct}
                 onDeleteProduct={handleDeleteProduct}
                 newProductId={newProductId}
                 expandedIds={expandedIds}
@@ -1307,6 +1362,15 @@ export default function App() {
           types={types}
           onSelect={handleJumpToProduct}
           onClose={() => setShowExpiring(false)}
+        />
+      )}
+      {expiredNotice && (
+        <ExpiredNotice
+          key={expiredNotice.key}
+          name={expiredNotice.name}
+          reason={expiredNotice.reason}
+          onUndo={() => { updateProduct(expiredNotice.id, expiredNotice.previous); closeExpiredNotice() }}
+          onClose={closeExpiredNotice}
         />
       )}
       {showChangelog && (

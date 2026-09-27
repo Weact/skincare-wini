@@ -85,6 +85,11 @@ export default function CategorySection({
 
   const isUncategorized = !category
 
+  // A product just added into this section shouldn't land hidden
+  useEffect(() => {
+    if (newProductId && products.some(p => p.id === newProductId)) setCollapsed(false)
+  }, [newProductId, products])
+
   // Close menu/emoji on outside click
   useEffect(() => {
     function handle(e) {

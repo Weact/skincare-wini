@@ -434,9 +434,42 @@ body {
   overflow: hidden;
 }
 
-.card--expired,
-.card--empty {
+.card--empty,
+/* Dimmed, except the "past its date" strip, which stays at full contrast */
+.card--expired > :not(.card-alert) {
   opacity: 0.72;
+}
+
+/* Past its "use within" date but not its expiration date: stays in its
+   category, so a red ring marks it out among its neighbours */
+.card--past-use {
+  box-shadow: var(--shadow-card), inset 0 0 0 2px var(--red);
+}
+
+/* "Past its date" warning strip under the header — shown for either date,
+   collapsed or open, in any section */
+.card-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--red-bg);
+  color: var(--red-text);
+  border-top: 1px solid var(--red);
+  font-size: var(--fz-base);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.card-alert-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.card-alert-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .card--selected {
@@ -505,6 +538,7 @@ body {
 .status-dot--open    { background: var(--sage); }
 .status-dot--expiring { background: var(--amber); }
 .status-dot--expired { background: var(--red); }
+.status-dot--past-use { background: var(--red); }
 .status-dot--empty   { background: var(--empty); }
 
 /* Product name in header */
@@ -568,6 +602,7 @@ body {
 .badge--open     { background: var(--sage-bg);     color: var(--sage-text); }
 .badge--expiring { background: var(--amber-bg);    color: var(--amber-text); }
 .badge--expired  { background: var(--red-bg);      color: var(--red-text); }
+.badge--past-use { background: var(--red-bg);      color: var(--red-text); box-shadow: inset 0 0 0 1.5px var(--red); }
 .badge--empty    { background: var(--empty-bg);    color: var(--empty-text); }
 /* Second, smaller chip beside the badge. It carries the time left on a date
    the badge itself doesn't spell out — a sealed product stays "Sealed", but
@@ -580,6 +615,49 @@ body {
 
 .badge--note-expiring { background: var(--amber-bg); color: var(--amber-text); }
 .badge--note-expired  { background: var(--red-bg);   color: var(--red-text); }
+
+/* The badges as one hover target for the dates tooltip */
+.card-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Hover card behind the countdown badge — "Use within" and "Expires" dates.
+   Fixed + portalled to body, since .card clips its overflow. */
+.dates-tooltip {
+  position: fixed;
+  z-index: 200;
+  max-width: min(300px, calc(100vw - 32px));
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  font-size: var(--fz-sm);
+  color: var(--text);
+  pointer-events: none;
+}
+
+.dates-tooltip-row {
+  display: flex;
+  gap: 10px;
+}
+
+.dates-tooltip-label {
+  min-width: 72px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.dates-tooltip-warning {
+  margin-top: 2px;
+  color: var(--amber-text);
+  font-weight: 600;
+}
 
 /* Expand chevron */
 .chevron {
@@ -1275,6 +1353,122 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   width: auto;
   flex: 1;
   margin-top: 0;
+}
+
+/* ── "Moved to Expired" notice — non-blocking card in the top-right corner.
+   Sized and coloured for legibility: 15px body in full-strength text colour,
+   a red accent + clock icon + explicit title (so colour isn't the only cue),
+   and 40px buttons whose colours clear WCAG contrast in both themes. ── */
+.expired-notice {
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top));
+  right: 16px;
+  z-index: 250;
+  width: min(360px, calc(100vw - 32px));
+  padding: 14px 16px 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-input);
+  border-left: 5px solid var(--red);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  animation: notice-in 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes notice-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expired-notice { animation: none; }
+}
+
+.expired-notice-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expired-notice-icon {
+  flex-shrink: 0;
+  color: var(--red-text);
+}
+
+.expired-notice-title {
+  flex: 1;
+  font-size: var(--fz-lg);
+  font-weight: 700;
+  color: var(--red-text);
+}
+
+.expired-notice-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  margin: -8px -8px -8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.expired-notice-close:hover {
+  background: var(--bg);
+}
+
+.expired-notice-text {
+  margin: 8px 0 14px;
+  font-size: var(--fz-md);
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.expired-notice-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.expired-notice-btn {
+  flex: 1;
+  min-height: 40px;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: var(--fz-base);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--text-muted);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.expired-notice-btn:hover {
+  background: var(--bg);
+}
+
+/* Inverted text/surface pair, like the toast — high contrast in both themes
+   (the rose primary with white text doesn't reach 4.5:1) */
+.expired-notice-btn--primary {
+  color: var(--surface);
+  background: var(--text);
+  border-color: var(--text);
+}
+
+.expired-notice-btn--primary:hover {
+  background: var(--text);
+  opacity: 0.88;
+}
+
+.expired-notice-btn:focus-visible,
+.expired-notice-close:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
 
 /* ── Shared profile (read-only view of someone else's data) ── */
