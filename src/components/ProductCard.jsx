@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { addMonths, formatDisplayDate, formatEventTime, formatTimeLeft, getDaysUntil, getPastDates, getProductStatus, getUseWithinDate, todayISO } from '../utils/dateUtils'
+import { addMonths, formatDisplayDate, formatEventTime, formatTimeLeft, getDaysUntil, getPastDates, getProductStatus, getUseWithinDate, needsPastUseChoice, todayISO } from '../utils/dateUtils'
 import { resizeImage } from '../utils/imageUtils'
 import { TIME_OF_DAY } from '../constants'
 import DateInput from './DateInput'
@@ -59,6 +59,9 @@ function DatesTooltip({ anchor, product, expiresFirst, onClose }) {
   )
 }
 
+// Keys that move a range input's thumb
+const SLIDER_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'])
+
 const USAGE_OPTIONS = [
   { value: 1, label: '1 month' },
   { value: 2, label: '2 months' },
@@ -72,6 +75,8 @@ const USAGE_OPTIONS = [
 export default function ProductCard({ product, onUpdate, onDelete, startExpanded, expanded, onToggleExpanded, categories = [], types = [], onCreateType, events = [], onOpenEvent, dragHandleProps, selectMode = false, selected = false, onToggleSelect, readOnly = false }) {
   const [name, setName] = useState(product.name || '')
   const [usageValue, setUsageValue] = useState(product.usageMonths || null)
+  // True while the slider's thumb is held or being moved by keyboard
+  const [adjustingUsage, setAdjustingUsage] = useState(false)
   const [suggestion, setSuggestion] = useState(null)
   const [dismissedKey, setDismissedKey] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -89,6 +94,9 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const typesForCategory = types.filter(t => t.categoryId === product.categoryId)
   const currentType = types.find(t => t.id === product.typeId)
   const isCustomUsage = usageValue != null && !USAGE_OPTIONS.some(o => o.value === usageValue)
+  // Where the slider's thumb sits, and the use-by date that works out to
+  const sliderMonths = usageValue || 1
+  const sliderUseBy = product.openingDate ? addMonths(product.openingDate, sliderMonths) : null
 
   const typeSuggestions = typesForCategory
     .filter(t => t.id !== product.typeId)
@@ -226,12 +234,25 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
     setUsageValue(parseInt(e.target.value))
   }
 
+  // Letting go of the thumb (or leaving the slider) ends the adjusting; a
+  // released arrow key only commits, so the preview doesn't blink per step
+  function handleUsageRangeRelease(e) {
+    setAdjustingUsage(false)
+    handleUsageRangeCommit(e)
+  }
+
   function handleUsageRangeCommit(e) {
     // Untouched while unset, the thumb just rests on 1 — tabbing through
     // mustn't write that as a real period
     if (usageValue == null) return
     const val = parseInt(e.currentTarget.value)
     if (val !== product.usageMonths) commitUsageMonths(val)
+  }
+
+  // Keyboard adjusting starts on a key that actually moves the thumb, so
+  // merely tabbing onto the slider doesn't pop the date preview up
+  function handleUsageRangeKeyDown(e) {
+    if (SLIDER_KEYS.has(e.key)) setAdjustingUsage(true)
   }
 
   function handleWarningDateChange(e) {
@@ -288,7 +309,21 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
   const [tipAnchor, setTipAnchor] = useState(null)
   const hideTip = useCallback(() => setTipAnchor(null), [])
   const hasDates = !!(product.expirationDate || product.usageMonths)
-  const past = getPastDates(product)
+  // Not in the Expired section — being there already says it
+  const past = status.type === 'expired' ? null : getPastDates(product)
+  const qty = clampQuantity(quantity)
+  // Only an opened product past "use within" (not its printed date, which
+  // moves it by itself) gets the Move/Keep choice
+  const canChoosePastUse = !readOnly && !selectMode && !!past?.useWithinDate && !past.expirationDate
+
+  // App splits off just the opened unit when there are several
+  function moveToExpired() {
+    onUpdate({ movedToExpiredAt: todayISO() })
+  }
+
+  function keepPastUse() {
+    onUpdate({ keptPastUseWithin: past.useWithinDate })
+  }
 
   return (
     <div id={'product-' + product.id} className={`card card--${status.type}${selectMode && selected ? ' card--selected' : ''}`}>
@@ -379,7 +414,7 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
         </div>
       </div>
 
-      {/* Stays up collapsed or open, in whatever section the card is in —
+      {/* Stays up collapsed or open, wherever the card sits outside Expired —
           a date that's gone by is never left to the badge alone */}
       {past && (
         <div className="card-alert">
@@ -394,6 +429,34 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
             )}
             {past.expirationDate && (
               <span>Past its expiration date ({formatDisplayDate(past.expirationDate)})</span>
+            )}
+            {/* Past "use within" only: the card stays put unless the user
+                sends it on. Asked once per date; "Keep" leaves the warning
+                up and Move to Expired still to hand. */}
+            {canChoosePastUse && (
+              needsPastUseChoice(product) ? (
+                <>
+                  <span className="card-alert-question">
+                    Move it to Expired, or keep it here?
+                    {qty > 1 && ` Only the opened one moves — the other ${qty - 1} stay here, still sealed.`}
+                  </span>
+                  <span className="card-alert-actions">
+                    <button type="button" className="card-alert-btn card-alert-btn--primary" onClick={moveToExpired}>
+                      {qty > 1 ? 'Move 1 to Expired' : 'Move to Expired'}
+                    </button>
+                    <button type="button" className="card-alert-btn" onClick={keepPastUse}>
+                      Keep as is
+                    </button>
+                  </span>
+                </>
+              ) : (
+                <span className="card-alert-kept">
+                  Kept here on purpose.
+                  <button type="button" className="card-alert-link" onClick={moveToExpired}>
+                    {qty > 1 ? 'Move 1 to Expired' : 'Move to Expired'}
+                  </button>
+                </span>
+              )
             )}
           </div>
         </div>
@@ -675,15 +738,27 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
                 className="usage-range"
                 value={usageValue || 1}
                 onChange={handleUsageRangeChange}
-                onPointerUp={handleUsageRangeCommit}
+                onPointerDown={() => setAdjustingUsage(true)}
+                onKeyDown={handleUsageRangeKeyDown}
+                onPointerUp={handleUsageRangeRelease}
+                onPointerCancel={handleUsageRangeRelease}
                 onKeyUp={handleUsageRangeCommit}
-                onBlur={handleUsageRangeCommit}
+                onBlur={handleUsageRangeRelease}
                 aria-label="Use within, in months"
+                aria-valuetext={`${sliderMonths} month${sliderMonths === 1 ? '' : 's'}${sliderUseBy ? `, should be used before ${formatDisplayDate(sliderUseBy)}` : ''}`}
               />
               <span className="usage-slider-value">
                 {usageValue ? `${usageValue} month${usageValue === 1 ? '' : 's'}` : 'Not set'}
               </span>
             </div>
+            {/* Only while the thumb is moving — what the period works out to */}
+            {adjustingUsage && (
+              <div className="usage-preview">
+                {sliderUseBy
+                  ? <>Should be used before: <strong>{formatDisplayDate(sliderUseBy)}</strong></>
+                  : 'Should be used before: set an opening date to see the date'}
+              </div>
+            )}
           </div>
 
           <div className="field">
@@ -736,6 +811,18 @@ export default function ProductCard({ product, onUpdate, onDelete, startExpanded
           >
             🫙 {product.emptiedAt ? `Emptied ${formatDisplayDate(product.emptiedAt)} — tap to undo` : 'Mark as empty'}
           </button>
+
+          {/* Only for a card moved to Expired by hand — one expired by its
+              printed date leaves that section by editing the date instead */}
+          {product.movedToExpiredAt && !(product.expirationDate && product.expirationDate < todayISO()) && (
+            <button
+              type="button"
+              className="empty-toggle-btn"
+              onClick={() => onUpdate({ movedToExpiredAt: null, keptPastUseWithin: getUseWithinDate(product) })}
+            >
+              ↩ Moved to Expired {formatDisplayDate(product.movedToExpiredAt)} — tap to move it back
+            </button>
+          )}
 
           <button
             className={`delete-btn ${confirmDelete ? 'delete-btn--confirm' : ''}`}

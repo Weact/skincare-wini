@@ -114,6 +114,10 @@ export function getProductStatus(product) {
   if (product.emptiedAt) {
     return { type: 'empty', label: 'Empty' }
   }
+  // Sent there by hand from the past-"use within" warning, whatever its dates
+  if (product.movedToExpiredAt) {
+    return { type: 'expired', label: 'Expired' }
+  }
   const useWithinDate = getUseWithinDate(product)
   const expiryDays = getDaysUntil(product.expirationDate)
 
@@ -167,6 +171,16 @@ export function getPastDates(product, today = todayISO()) {
   return Object.keys(past).length ? past : null
 }
 
+// Past its "use within" date and still waiting on the user's call — Move to
+// Expired or Keep as is. "Keep" records the date it was made against, so a
+// new period (or opening date) that runs out later asks again.
+export function needsPastUseChoice(product) {
+  const past = getPastDates(product)
+  if (!past?.useWithinDate || past.expirationDate) return false
+  if (getProductStatus(product).type === 'expired') return false
+  return product.keptPastUseWithin !== past.useWithinDate
+}
+
 // The products the Expiring button surfaces, soonest first. Two ways in:
 // anything still ahead of its printed date but less than 12 months out, and
 // sealed products already past it — those keep their Sealed badge and stay in
@@ -181,7 +195,8 @@ export function getExpiringSoon(products) {
   const limit = toISODate(cutoff)
   return products
     .filter(p => {
-      if (p.emptiedAt || !p.expirationDate) return false
+      // Moved to Expired by hand: already in that section, like any expired one
+      if (p.emptiedAt || p.movedToExpiredAt || !p.expirationDate) return false
       if (p.expirationDate < today) return !p.openingDate
       return p.expirationDate < limit
     })

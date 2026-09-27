@@ -52,8 +52,8 @@
   --scratch-cover-end: #6a4a9c;
 
   --text: #1c1c2e;
-  --text-muted: #7a7a8e;
-  --text-light: #a8a8bb;
+  --text-muted: #5f5f73;  /* 6.2:1 on surface — was #7a7a8e, 4.2:1, under AA */
+  --text-light: #858598;  /* 3.6:1 — decorative/large only; was 2.3:1 */
 
   --radius: 18px;
   --radius-sm: 12px;
@@ -98,8 +98,8 @@
   --scratch-cover-end: #4c3480;
 
   --text: #ede8f8;
-  --text-muted: #8880a8;
-  --text-light: #504870;
+  --text-muted: #a49dc0;
+  --text-light: #7a7399;
 
   --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
@@ -434,10 +434,17 @@ body {
   overflow: hidden;
 }
 
-.card--empty,
-/* Dimmed, except the "past its date" strip, which stays at full contrast */
-.card--expired > :not(.card-alert) {
-  opacity: 0.72;
+/* Set apart by a flat, sunken look rather than fading — opacity took their
+   text below readable contrast. The photo is what goes grey. */
+.card--expired,
+.card--empty {
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1px var(--border-input);
+}
+
+.card--expired .card-thumb,
+.card--empty .card-thumb {
+  filter: grayscale(1);
 }
 
 /* Past its "use within" date but not its expiration date: stays in its
@@ -447,7 +454,7 @@ body {
 }
 
 /* "Past its date" warning strip under the header — shown for either date,
-   collapsed or open, in any section */
+   collapsed or open, everywhere but the Expired section */
 .card-alert {
   display: flex;
   align-items: flex-start;
@@ -470,6 +477,69 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+}
+
+/* The Move / Keep choice for a product past "use within" */
+.card-alert-question,
+.card-alert-kept {
+  margin-top: 4px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.card-alert-kept {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.card-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.card-alert-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: var(--fz-base);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--text-muted);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Inverted text/surface pair — same high-contrast primary as the notice */
+.card-alert-btn--primary {
+  color: var(--surface);
+  background: var(--text);
+  border-color: var(--text);
+}
+
+.card-alert-link {
+  padding: 4px 0;
+  font-family: inherit;
+  font-size: var(--fz-base);
+  font-weight: 600;
+  color: var(--red-text);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.card-alert-btn:focus-visible,
+.card-alert-link:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
 
 .card--selected {
@@ -562,7 +632,7 @@ body {
 /* How many units you have, riding at the end of the name */
 .card-qty {
   flex-shrink: 0;
-  font-size: var(--fz-sm);
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-muted);
 }
@@ -580,7 +650,7 @@ body {
 }
 
 .card-dates {
-  font-size: var(--fz-sm);
+  font-size: 13px;
   color: var(--text-muted);
   font-weight: 400;
   white-space: nowrap;
@@ -590,9 +660,9 @@ body {
 
 /* Status badge */
 .badge {
-  font-size: var(--fz-sm);
+  font-size: 13px;
   font-weight: 600;
-  padding: 3px 9px;
+  padding: 3px 10px;
   border-radius: 20px;
   white-space: nowrap;
   letter-spacing: 0.1px;
@@ -637,7 +707,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-card);
-  font-size: var(--fz-sm);
+  font-size: var(--fz-base);
   color: var(--text);
   pointer-events: none;
 }
@@ -688,7 +758,7 @@ body {
 }
 
 .field-label {
-  font-size: var(--fz-xs);
+  font-size: var(--fz-sm);
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -696,8 +766,9 @@ body {
 }
 
 .field-hint {
-  font-size: var(--fz-sm);
-  color: var(--text-light);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
   margin-bottom: 2px;
 }
 
@@ -1171,6 +1242,16 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   min-width: 68px;
   text-align: right;
   flex-shrink: 0;
+}
+
+/* "Should be used before: …" — shown only while the slider is being moved */
+.usage-preview {
+  margin-top: 8px;
+  padding: 8px 12px;
+  font-size: var(--fz-base);
+  color: var(--text);
+  background: var(--primary-light);
+  border-radius: var(--radius-xs);
 }
 
 /* ── Expiring-this-year button + list ── */
@@ -2192,9 +2273,6 @@ input[type="date"].field-input::-webkit-date-and-time-value {
   margin-bottom: 20px;
 }
 
-.cat-section--uncategorized .cat-header {
-  opacity: 0.75;
-}
 
 .cat-section--expired .cat-name {
   color: var(--red-text);
@@ -2277,7 +2355,7 @@ input[type="date"].field-input::-webkit-date-and-time-value {
 .cat-count {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-light);
+  color: var(--text-muted);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 20px;

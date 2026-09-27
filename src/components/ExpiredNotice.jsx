@@ -8,7 +8,7 @@ const AUTO_HIDE_MS = 12000
 // modal: it's announced politely, never takes focus or blocks the page, and
 // fades on its own unless the pointer or keyboard is on it. Undo puts the
 // edited fields back.
-export default function ExpiredNotice({ name, reason, onUndo, onClose }) {
+export default function ExpiredNotice({ lead, name, reason, onUndo, onClose }) {
   const [paused, setPaused] = useState(false)
 
   useEffect(() => {
@@ -41,8 +41,7 @@ export default function ExpiredNotice({ name, reason, onUndo, onClose }) {
         </button>
       </div>
       <p className="expired-notice-text">
-        <strong>{name || 'Unnamed product'}</strong> {reason}. It's now in the Expired
-        section at the bottom of the list.
+        {lead}<strong>{name || 'Unnamed product'}</strong> {reason}.
       </p>
       <div className="expired-notice-actions">
         <button type="button" className="expired-notice-btn" onClick={onUndo}>Undo</button>

@@ -617,18 +617,50 @@ export default function App() {
 
   function handleUpdateProduct(id, updates) {
     const product = products.find(p => p.id === id)
-    if (product && getProductStatus(product).type !== 'expired') {
+    if (!product) return updateProduct(id, updates)
+    // What the edited fields held before, for Undo
+    const previous = Object.fromEntries(Object.keys(updates).map(k => [k, product[k] ?? null]))
+    const qty = product.quantity ?? 1
+
+    // "Move to Expired" on one of several units: only the opened one is used
+    // up. It splits off as its own one-unit card in Expired, and this card —
+    // keeping its id, place, and linked routine events — carries on with the
+    // rest, which were never opened.
+    if (updates.movedToExpiredAt && qty > 1) {
+      const splitId = generateId()
+      addProduct({
+        ...product, ...updates,
+        id: splitId, quantity: 1, keptPastUseWithin: null, createdAt: new Date().toISOString(),
+      })
+      const rest = { quantity: qty - 1, openingDate: null, keptPastUseWithin: null }
+      setExpiredNotice({
+        key: Date.now(), id, splitId,
+        lead: `One of your ${qty} `,
+        name: product.name,
+        reason: `(the opened one) was moved to the Expired section at the bottom of the list. The other ${qty - 1} stay where they were, still sealed`,
+        previous: Object.fromEntries(Object.keys(rest).map(k => [k, product[k] ?? null])),
+      })
+      return updateProduct(id, rest)
+    }
+
+    if (getProductStatus(product).type !== 'expired') {
       const next = { ...product, ...updates }
       if (getProductStatus(next).type === 'expired') {
-        // Only the printed date moves a card — past "use within" stays put
-        const reason = `passed its expiration date, ${formatDisplayDate(next.expirationDate)}`
-        // What the edited fields held before, for Undo
-        const previous = Object.fromEntries(Object.keys(updates).map(k => [k, product[k] ?? null]))
+        const reason = updates.movedToExpiredAt
+          ? 'was moved to the Expired section at the bottom of the list'
+          : `passed its expiration date, ${formatDisplayDate(next.expirationDate)}, so it's now in the Expired section at the bottom of the list`
         // key: a second product expiring replaces the notice and restarts its timer
         setExpiredNotice({ key: Date.now(), id, name: next.name, reason, previous })
       }
     }
     return updateProduct(id, updates)
+  }
+
+  function undoExpiredNotice() {
+    const { id, splitId, previous } = expiredNotice
+    updateProduct(id, previous)
+    if (splitId) deleteProduct(splitId)
+    closeExpiredNotice()
   }
 
   async function handleDeleteProduct(productId) {
@@ -1367,9 +1399,10 @@ export default function App() {
       {expiredNotice && (
         <ExpiredNotice
           key={expiredNotice.key}
+          lead={expiredNotice.lead}
           name={expiredNotice.name}
           reason={expiredNotice.reason}
-          onUndo={() => { updateProduct(expiredNotice.id, expiredNotice.previous); closeExpiredNotice() }}
+          onUndo={undoExpiredNotice}
           onClose={closeExpiredNotice}
         />
       )}
